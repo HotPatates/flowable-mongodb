@@ -1,19 +1,9 @@
-/* Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.flowable.mongodb.persistence.manager;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import org.bson.Document;
 import org.flowable.common.engine.impl.persistence.entity.Entity;
 import org.flowable.engine.impl.persistence.entity.CommentEntity;
 import org.flowable.engine.impl.persistence.entity.CommentEntityImpl;
@@ -24,9 +14,6 @@ import org.flowable.mongodb.cfg.MongoDbProcessEngineConfiguration;
 
 import com.mongodb.BasicDBObject;
 
-/**
- * @author Tijs Rademakers
- */
 public class MongoDbCommentDataManager extends AbstractMongoDbDataManager<CommentEntity> implements CommentDataManager {
 
     public static final String COLLECTION_COMMENTS = "comments";
@@ -47,74 +34,121 @@ public class MongoDbCommentDataManager extends AbstractMongoDbDataManager<Commen
 
     @Override
     public BasicDBObject createUpdateObject(Entity entity) {
-        return null;
+        CommentEntityImpl comment = (CommentEntityImpl) entity;
+        BasicDBObject updateObject = null;
+        updateObject = setUpdateProperty(comment, "type", comment.getType(), updateObject);
+        updateObject = setUpdateProperty(comment, "userId", comment.getUserId(), updateObject);
+        updateObject = setUpdateProperty(comment, "taskId", comment.getTaskId(), updateObject);
+        updateObject = setUpdateProperty(comment, "processInstanceId", comment.getProcessInstanceId(), updateObject);
+        updateObject = setUpdateProperty(comment, "time", comment.getTime(), updateObject);
+        updateObject = setUpdateProperty(comment, "action", comment.getAction(), updateObject);
+        updateObject = setUpdateProperty(comment, "message", comment.getMessage(), updateObject);
+        updateObject = setUpdateProperty(comment, "fullMessage", comment.getFullMessage(), updateObject);
+        return updateObject;
+    }
+
+    protected CommentEntityImpl mapToEntity(Document doc) {
+        CommentEntityImpl entity = new CommentEntityImpl();
+        entity.setId(doc.getString("id"));
+        entity.setType(doc.getString("type"));
+        entity.setUserId(doc.getString("userId"));
+        entity.setTaskId(doc.getString("taskId"));
+        entity.setProcessInstanceId(doc.getString("processInstanceId"));
+        entity.setTime(doc.getDate("time"));
+        entity.setAction(doc.getString("action"));
+        entity.setMessage(doc.getString("message"));
+        entity.setFullMessage(doc.getString("fullMessage"));
+        return entity;
     }
 
     @Override
     public List<Comment> findCommentsByTaskId(String taskId) {
-        // TODO Auto-generated method stub
-        return null;
+        List<Document> results = getMongoDbSession().find(COLLECTION_COMMENTS, new BasicDBObject("taskId", taskId));
+        List<Comment> comments = new ArrayList<>();
+        for (Document doc : results) {
+            comments.add(mapToEntity(doc));
+        }
+        return comments;
     }
 
     @Override
     public List<Comment> findCommentsByTaskIdAndType(String taskId, String type) {
-        // TODO Auto-generated method stub
-        return null;
+        BasicDBObject query = new BasicDBObject("taskId", taskId).append("type", type);
+        List<Document> results = getMongoDbSession().find(COLLECTION_COMMENTS, query);
+        List<Comment> comments = new ArrayList<>();
+        for (Document doc : results) {
+            comments.add(mapToEntity(doc));
+        }
+        return comments;
     }
 
     @Override
     public List<Comment> findCommentsByType(String type) {
-        // TODO Auto-generated method stub
-        return null;
+        List<Document> results = getMongoDbSession().find(COLLECTION_COMMENTS, new BasicDBObject("type", type));
+        List<Comment> comments = new ArrayList<>();
+        for (Document doc : results) {
+            comments.add(mapToEntity(doc));
+        }
+        return comments;
     }
 
     @Override
-    public List<Event> findEventsByTaskId(String taskId) {
-        // TODO Auto-generated method stub
-        return null;
+    public List<Event> findEventsByTaskId(String s) {
+        return List.of();//TODO
     }
 
     @Override
-    public List<Event> findEventsByProcessInstanceId(String processInstanceId) {
-        // TODO Auto-generated method stub
-        return null;
+    public List<Event> findEventsByProcessInstanceId(String s) {
+        return List.of();//TODO
     }
 
     @Override
     public void deleteCommentsByTaskId(String taskId) {
-        // TODO Auto-generated method stub
-
+        findCommentsByTaskId(taskId).forEach(comment -> {
+            delete(comment.getId());
+        });
     }
 
     @Override
     public void deleteCommentsByProcessInstanceId(String processInstanceId) {
-        // TODO Auto-generated method stub
-
+        findCommentsByProcessInstanceId(processInstanceId).forEach(comment -> {
+            delete(comment.getId());
+        });
     }
 
     @Override
     public List<Comment> findCommentsByProcessInstanceId(String processInstanceId) {
-        // TODO Auto-generated method stub
-        return null;
+        List<Document> results = getMongoDbSession().find(COLLECTION_COMMENTS, new BasicDBObject("processInstanceId", processInstanceId));
+        List<Comment> comments = new ArrayList<>();
+        for (Document doc : results) {
+            comments.add(mapToEntity(doc));
+        }
+        return comments;
     }
 
     @Override
     public List<Comment> findCommentsByProcessInstanceId(String processInstanceId, String type) {
-        // TODO Auto-generated method stub
-        return null;
+        BasicDBObject query = new BasicDBObject("processInstanceId", processInstanceId).append("type", type);
+        List<Document> results = getMongoDbSession().find(COLLECTION_COMMENTS, query);
+        List<Comment> comments = new ArrayList<>();
+        for (Document doc : results) {
+            comments.add(mapToEntity(doc));
+        }
+        return comments;
     }
 
     @Override
     public Comment findComment(String commentId) {
-        // TODO Auto-generated method stub
+        Document doc = getMongoDbSession().findOne(COLLECTION_COMMENTS, commentId);
+        if (doc != null) {
+            return mapToEntity(doc);
+        }
         return null;
     }
 
     @Override
-    public Event findEvent(String commentId) {
-        // TODO Auto-generated method stub
-        return null;
+    public Event findEvent(String s) {
+        return null;//TODO
     }
-
 
 }

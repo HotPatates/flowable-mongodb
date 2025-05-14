@@ -1,28 +1,19 @@
-/* Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.flowable.mongodb.persistence.manager;
 
 import org.flowable.common.engine.impl.persistence.entity.Entity;
 import org.flowable.engine.impl.persistence.entity.ProcessDefinitionInfoEntity;
 import org.flowable.engine.impl.persistence.entity.data.ProcessDefinitionInfoDataManager;
 import org.flowable.mongodb.cfg.MongoDbProcessEngineConfiguration;
+import org.flowable.mongodb.persistence.entity.MongoProcessDefinitionInfoEntity;
 
 import com.mongodb.BasicDBObject;
+import org.bson.Document;
 
 /**
  * @author Joram Barrez
  */
-public class MongoDbProcessDefinitionInfoDataManager extends AbstractMongoDbDataManager<ProcessDefinitionInfoEntity> implements ProcessDefinitionInfoDataManager {
+public class MongoDbProcessDefinitionInfoDataManager extends AbstractMongoDbDataManager<ProcessDefinitionInfoEntity>
+        implements ProcessDefinitionInfoDataManager {
 
     public static final String COLLECTION_PROCESS_DEFINITION_INFO = "processDefinitionInfo";
 
@@ -37,18 +28,41 @@ public class MongoDbProcessDefinitionInfoDataManager extends AbstractMongoDbData
 
     @Override
     public ProcessDefinitionInfoEntity create() {
-        throw new UnsupportedOperationException();
+        return new MongoProcessDefinitionInfoEntity();
     }
 
     @Override
     public BasicDBObject createUpdateObject(Entity entity) {
-        return null;
+        MongoProcessDefinitionInfoEntity processDefinitionInfo = (MongoProcessDefinitionInfoEntity) entity;
+        BasicDBObject updateObject = null;
+
+        updateObject = setUpdateProperty(processDefinitionInfo, "processDefinitionId", processDefinitionInfo.getProcessDefinitionId(), updateObject);
+        updateObject = setUpdateProperty(processDefinitionInfo, "infoJsonId", processDefinitionInfo.getInfoJsonId(), updateObject);
+        updateObject = setUpdateProperty(processDefinitionInfo, "revision", processDefinitionInfo.getRevision(), updateObject);
+        updateObject = setUpdateProperty(processDefinitionInfo, "latest", processDefinitionInfo.isLatest(), updateObject);
+
+        return updateObject;
     }
 
     @Override
     public ProcessDefinitionInfoEntity findProcessDefinitionInfoByProcessDefinitionId(String processDefinitionId) {
-        // TODO
+        BasicDBObject query = new BasicDBObject("processDefinitionId", processDefinitionId);
+
+        Document document = getMongoDbSession().getMongoDatabase()
+                .getCollection(COLLECTION_PROCESS_DEFINITION_INFO)
+                .find(query)
+                .first();
+
+        if (document != null) {
+            MongoProcessDefinitionInfoEntity entity = new MongoProcessDefinitionInfoEntity();
+            entity.setId(document.getString("id"));
+            entity.setProcessDefinitionId(document.getString("processDefinitionId"));
+            entity.setInfoJsonId(document.getString("infoJsonId"));
+            entity.setRevision(document.getInteger("revision", 1));
+            entity.setLatest(document.getBoolean("latest", false));
+            return entity;
+        }
+
         return null;
     }
-
 }

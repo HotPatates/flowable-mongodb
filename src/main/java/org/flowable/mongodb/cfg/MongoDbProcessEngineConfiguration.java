@@ -53,7 +53,6 @@ import org.flowable.mongodb.persistence.manager.MongoDbDeadLetterJobDataManager;
 import org.flowable.mongodb.persistence.manager.MongoDbSuspendedJobDataManager;
 import org.flowable.mongodb.schema.MongoProcessSchemaManager;
 import org.flowable.mongodb.transaction.MongoDbTransactionContextFactory;
-import org.flowable.mongodb.transaction.MongoDbTransactionInterceptor;
 import org.flowable.task.service.TaskServiceConfiguration;
 import org.flowable.variable.service.VariableServiceConfiguration;
 
@@ -66,7 +65,6 @@ import com.mongodb.client.MongoDatabase;
  * @author Joram Barrez
  */
 public class MongoDbProcessEngineConfiguration extends ProcessEngineConfigurationImpl {
-
     protected List<ServerAddress> serverAddresses = new ArrayList<>();
     protected String databaseName = "flowable";
     protected MongoClientOptions mongoClientOptions;

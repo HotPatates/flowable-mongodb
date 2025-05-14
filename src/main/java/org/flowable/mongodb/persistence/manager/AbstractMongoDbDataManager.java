@@ -69,6 +69,7 @@ public abstract class AbstractMongoDbDataManager<EntityImpl extends Entity> impl
         delete(entity);
     }
 
+
     @Override
     public void delete(EntityImpl entity) {
         getMongoDbSession().delete(getCollection(), entity);
