@@ -31,9 +31,7 @@ import org.flowable.mongodb.cfg.MongoDbProcessEngineConfiguration;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Filters;
 
-/**
- * @author Tijs Rademakers
- */
+
 public class MongoDbHistoricProcessInstanceDataManager extends AbstractMongoDbDataManager<HistoricProcessInstanceEntity> implements HistoricProcessInstanceDataManager {
 
     public static final String COLLECTION_HISTORIC_PROCESS_INSTANCES = "historicProcessInstances";
@@ -53,6 +51,11 @@ public class MongoDbHistoricProcessInstanceDataManager extends AbstractMongoDbDa
     }
 
     @Override
+    public HistoricProcessInstanceEntity create(ExecutionEntity processInstanceExecutionEntity) {
+        return new HistoricProcessInstanceEntityImpl(processInstanceExecutionEntity);
+    }
+
+    @Override
     public BasicDBObject createUpdateObject(Entity entity) {
         HistoricProcessInstanceEntity instanceEntity = (HistoricProcessInstanceEntity) entity;
         BasicDBObject updateObject = null;
@@ -66,13 +69,9 @@ public class MongoDbHistoricProcessInstanceDataManager extends AbstractMongoDbDa
     }
 
     @Override
-    public HistoricProcessInstanceEntity create(ExecutionEntity processInstanceExecutionEntity) {
-        return new HistoricProcessInstanceEntityImpl(processInstanceExecutionEntity);
-    }
-
-    @Override
     public List<String> findHistoricProcessInstanceIdsByProcessDefinitionId(String processDefinitionId) {
-        List<HistoricProcessInstance> historicProcessInstances = getMongoDbSession().find(COLLECTION_HISTORIC_PROCESS_INSTANCES, Filters.eq("processDefinitionId", processDefinitionId));
+        List<HistoricProcessInstance> historicProcessInstances = getMongoDbSession()
+                .find(COLLECTION_HISTORIC_PROCESS_INSTANCES, Filters.eq("processDefinitionId", processDefinitionId));
         if (historicProcessInstances != null && !historicProcessInstances.isEmpty()) {
             return historicProcessInstances.stream().map(HistoricProcessInstance::getId).collect(Collectors.toList());
         } else {
@@ -82,7 +81,8 @@ public class MongoDbHistoricProcessInstanceDataManager extends AbstractMongoDbDa
 
     @Override
     public List<HistoricProcessInstance> findHistoricProcessInstancesBySuperProcessInstanceId(String superProcessInstanceId) {
-        return getMongoDbSession().find(COLLECTION_HISTORIC_PROCESS_INSTANCES, Filters.eq("superProcessInstanceId", superProcessInstanceId));
+        return getMongoDbSession().find(COLLECTION_HISTORIC_PROCESS_INSTANCES,
+                Filters.eq("superProcessInstanceId", superProcessInstanceId));
     }
 
     @Override
@@ -92,27 +92,30 @@ public class MongoDbHistoricProcessInstanceDataManager extends AbstractMongoDbDa
 
     @Override
     public long findHistoricProcessInstanceCountByQueryCriteria(HistoricProcessInstanceQueryImpl historicProcessInstanceQuery) {
-        throw new UnsupportedOperationException();
+        return getMongoDbSession().count(COLLECTION_HISTORIC_PROCESS_INSTANCES, createFilter(historicProcessInstanceQuery));
     }
 
     @Override
     public List<HistoricProcessInstance> findHistoricProcessInstancesAndVariablesByQueryCriteria(HistoricProcessInstanceQueryImpl historicProcessInstanceQuery) {
-        throw new UnsupportedOperationException();
+        // Assuming variables are stored within the same document under "variables" field
+        return getMongoDbSession().find(COLLECTION_HISTORIC_PROCESS_INSTANCES, createFilter(historicProcessInstanceQuery));
     }
 
     @Override
     public List<HistoricProcessInstance> findHistoricProcessInstancesByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
+        BasicDBObject filter = new BasicDBObject(parameterMap);
+        return getMongoDbSession().find(COLLECTION_HISTORIC_PROCESS_INSTANCES, filter);
     }
 
     @Override
     public long findHistoricProcessInstanceCountByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
+        BasicDBObject filter = new BasicDBObject(parameterMap);
+        return getMongoDbSession().count(COLLECTION_HISTORIC_PROCESS_INSTANCES, filter);
     }
 
     @Override
     public void deleteHistoricProcessInstances(HistoricProcessInstanceQueryImpl historicProcessInstanceQuery) {
-        throw new UnsupportedOperationException();
+        getMongoDbSession().delete(COLLECTION_HISTORIC_PROCESS_INSTANCES, getMongoDbSession().findOne(COLLECTION_HISTORIC_PROCESS_INSTANCES,createFilter(historicProcessInstanceQuery)));
     }
 
     protected Bson createFilter(HistoricProcessInstanceQueryImpl processInstanceQuery) {
@@ -134,8 +137,8 @@ public class MongoDbHistoricProcessInstanceDataManager extends AbstractMongoDbDa
         }
 
         Bson filter = null;
-        if (andFilters.size() > 0) {
-            filter = Filters.and(andFilters.toArray(new Bson[andFilters.size()]));
+        if (!andFilters.isEmpty()) {
+            filter = Filters.and(andFilters);
         }
 
         return filter;

@@ -15,6 +15,7 @@ package org.flowable.mongodb.persistence.manager;
 import java.util.List;
 import java.util.Map;
 
+import org.bson.conversions.Bson;
 import org.flowable.common.engine.impl.persistence.entity.Entity;
 import org.flowable.engine.history.HistoricDetail;
 import org.flowable.engine.impl.HistoricDetailQueryImpl;
@@ -79,33 +80,93 @@ public class MongoDbHistoricDetailDataManager extends AbstractMongoDbDataManager
     }
 
     @Override
-    public long findHistoricDetailCountByQueryCriteria(HistoricDetailQueryImpl historicVariableUpdateQuery) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public List<HistoricDetail> findHistoricDetailsByQueryCriteria(HistoricDetailQueryImpl historicVariableUpdateQuery) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public List<HistoricDetail> findHistoricDetailsByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long findHistoricDetailCountByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public void deleteHistoricDetailForNonExistingProcessInstances() {
         throw new UnsupportedOperationException();
     }
 
     @Override
+    public long findHistoricDetailCountByQueryCriteria(HistoricDetailQueryImpl historicVariableUpdateQuery) {
+        return getMongoDbSession().count(COLLECTION_HISTORIC_DETAILS, createFilter(historicVariableUpdateQuery));
+    }
+
+    @Override
+    public List<HistoricDetail> findHistoricDetailsByQueryCriteria(HistoricDetailQueryImpl historicVariableUpdateQuery) {
+        return getMongoDbSession().find(COLLECTION_HISTORIC_DETAILS, createFilter(historicVariableUpdateQuery));
+    }
+
+    @Override
+    public List<HistoricDetail> findHistoricDetailsByNativeQuery(Map<String, Object> parameterMap) {
+        BasicDBObject query = new BasicDBObject(parameterMap);
+        return getMongoDbSession().find(COLLECTION_HISTORIC_DETAILS, query);
+    }
+
+    @Override
+    public long findHistoricDetailCountByNativeQuery(Map<String, Object> parameterMap) {
+        BasicDBObject query = new BasicDBObject(parameterMap);
+        return getMongoDbSession().count(COLLECTION_HISTORIC_DETAILS, query);
+    }
+
+
+    @Override
     public BasicDBObject createUpdateObject(Entity entity) {
+        if (entity instanceof HistoricDetailVariableInstanceUpdateEntityImpl) {
+            HistoricDetailVariableInstanceUpdateEntityImpl detail = (HistoricDetailVariableInstanceUpdateEntityImpl) entity;
+            BasicDBObject update = new BasicDBObject();
+            update.append("name", detail.getName());
+            update.append("variableTypeName", detail.getVariableTypeName());
+            update.append("textValue", detail.getTextValue());
+            update.append("textValue2", detail.getTextValue2());
+            update.append("longValue", detail.getLongValue());
+            update.append("doubleValue", detail.getDoubleValue());
+            update.append("processInstanceId", detail.getProcessInstanceId());
+            update.append("executionId", detail.getExecutionId());
+            update.append("taskId", detail.getTaskId());
+            update.append("time", detail.getTime());
+            update.append("revision", detail.getRevision());
+            return update;
+
+        } else if (entity instanceof HistoricFormPropertyEntityImpl) {
+            HistoricFormPropertyEntityImpl detail = (HistoricFormPropertyEntityImpl) entity;
+            BasicDBObject update = new BasicDBObject();
+            update.append("propertyId", detail.getPropertyId());
+            update.append("propertyValue", detail.getPropertyValue());
+            update.append("processInstanceId", detail.getProcessInstanceId());
+            update.append("executionId", detail.getExecutionId());
+            update.append("taskId", detail.getTaskId());
+            update.append("time", detail.getTime());
+            return update;
+
+        } else if (entity instanceof HistoricDetailAssignmentEntityImpl) {
+            HistoricDetailAssignmentEntityImpl detail = (HistoricDetailAssignmentEntityImpl) entity;
+            BasicDBObject update = new BasicDBObject();
+            update.append("processInstanceId", detail.getProcessInstanceId());
+            update.append("executionId", detail.getExecutionId());
+            update.append("taskId", detail.getTaskId());
+            update.append("time", detail.getTime());
+            return update;
+        }
+
         return null;
     }
+
+    protected Bson createFilter(HistoricDetailQueryImpl query) {
+        List<Bson> filters = new java.util.ArrayList<>();
+
+        if (query.getProcessInstanceId() != null) {
+            filters.add(Filters.eq("processInstanceId", query.getProcessInstanceId()));
+        }
+
+        if (query.getExecutionId() != null) {
+            filters.add(Filters.eq("executionId", query.getExecutionId()));
+        }
+
+        if (query.getTaskId() != null) {
+            filters.add(Filters.eq("taskId", query.getTaskId()));
+        }
+
+
+        return makeAndFilter(filters);
+    }
+
 
 }

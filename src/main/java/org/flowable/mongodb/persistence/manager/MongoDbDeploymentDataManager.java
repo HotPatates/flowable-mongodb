@@ -14,6 +14,7 @@ package org.flowable.mongodb.persistence.manager;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.flowable.common.engine.impl.persistence.entity.Entity;
 import org.flowable.engine.impl.DeploymentQueryImpl;
@@ -48,33 +49,79 @@ public class MongoDbDeploymentDataManager extends AbstractMongoDbDataManager<Dep
 
     @Override
     public BasicDBObject createUpdateObject(Entity entity) {
-        return null;
+        DeploymentEntity deployment = (DeploymentEntity) entity;
+        BasicDBObject update = new BasicDBObject();
+        update.put("name", deployment.getName());
+        update.put("category", deployment.getCategory());
+        update.put("deploymentTime", deployment.getDeploymentTime());
+        update.put("tenantId", deployment.getTenantId());
+        update.put("engineVersion", deployment.getEngineVersion());
+        return update;
     }
+
 
     @Override
     public long findDeploymentCountByQueryCriteria(DeploymentQueryImpl deploymentQuery) {
-        // TODO: extract and do properly
-        return getMongoDbSession().count(COLLECTION_DEPLOYMENT, null);
+        BasicDBObject query = new BasicDBObject();
+
+        if (deploymentQuery.getDeploymentId() != null) {
+            query.put("deploymentId", deploymentQuery.getDeploymentId());
+        }
+        if (deploymentQuery.getName() != null) {
+            query.put("name", deploymentQuery.getName());
+        }
+        if (deploymentQuery.getCategory() != null) {
+            query.put("category", deploymentQuery.getCategory());
+        }
+        if (deploymentQuery.getTenantId() != null) {
+            query.put("tenantId", deploymentQuery.getTenantId());
+        }
+        if (deploymentQuery.getNameLike() != null) {
+            query.put("name", new BasicDBObject("$regex", deploymentQuery.getNameLike()));
+        }
+
+        return getMongoDbSession().count(COLLECTION_DEPLOYMENT, query);
     }
+
 
     @Override
     public List<Deployment> findDeploymentsByQueryCriteria(DeploymentQueryImpl deploymentQuery) {
-        return getMongoDbSession().find(COLLECTION_DEPLOYMENT, null);
+        BasicDBObject query = new BasicDBObject();
+
+        if (deploymentQuery.getDeploymentId() != null) {
+            query.put("deploymentId", deploymentQuery.getDeploymentId());
+        }
+        if (deploymentQuery.getName() != null) {
+            query.put("name", deploymentQuery.getName());
+        }
+        if (deploymentQuery.getCategory() != null) {
+            query.put("category", deploymentQuery.getCategory());
+        }
+        if (deploymentQuery.getTenantId() != null) {
+            query.put("tenantId", deploymentQuery.getTenantId());
+        }
+        if (deploymentQuery.getNameLike() != null) {
+            query.put("name", new BasicDBObject("$regex", deploymentQuery.getNameLike()));
+        }
+
+        return getMongoDbSession().find(COLLECTION_DEPLOYMENT, query);
     }
 
     @Override
     public List<String> getDeploymentResourceNames(String deploymentId) {
-        throw new UnsupportedOperationException();
+        List<BasicDBObject> resources = getMongoDbSession().find("resources", new BasicDBObject("deploymentId", deploymentId));
+        return resources.stream()
+                .map(doc -> (String) doc.get("name"))
+                .collect(Collectors.toList());
     }
-
-    @Override
     public List<Deployment> findDeploymentsByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
+        BasicDBObject query = new BasicDBObject(parameterMap);
+        return getMongoDbSession().find(COLLECTION_DEPLOYMENT, query);
     }
 
-    @Override
     public long findDeploymentCountByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
+        BasicDBObject query = new BasicDBObject(parameterMap);
+        return getMongoDbSession().count(COLLECTION_DEPLOYMENT, query);
     }
 
 }

@@ -111,26 +111,68 @@ public class MongoDbActivityInstanceDataManager extends AbstractMongoDbDataManag
 
     @Override
     public long findActivityInstanceCountByQueryCriteria(ActivityInstanceQueryImpl activityInstanceQuery) {
-        throw new UnsupportedOperationException();
+        return getMongoDbSession().count(COLLECTION_ACTIVITY_INSTANCES,createFilter(activityInstanceQuery));
     }
 
     @Override
     public List<ActivityInstance> findActivityInstancesByQueryCriteria(ActivityInstanceQueryImpl activityInstanceQuery) {
-        throw new UnsupportedOperationException();
+        return getMongoDbSession().find(COLLECTION_ACTIVITY_INSTANCES,createFilter(activityInstanceQuery));
     }
 
     @Override
     public List<ActivityInstance> findActivityInstancesByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
+        return getMongoDbSession().find(COLLECTION_ACTIVITY_INSTANCES,createFilter(parameterMap));
     }
 
     @Override
     public long findActivityInstanceCountByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
+        return getMongoDbSession().count(COLLECTION_ACTIVITY_INSTANCES,createFilter(parameterMap));
     }
 
     @Override
     public ActivityInstanceEntity create() {
         return new ActivityInstanceEntityImpl();
+    }
+
+    protected Bson createFilter(ActivityInstanceQueryImpl query) {
+        List<Bson> filters = new ArrayList<>();
+        if(query.getProcessInstanceId() != null) {
+            filters.add(Filters.eq("processInstanceId", query.getProcessInstanceId()));
+        }
+        if(query.getProcessDefinitionId() != null) {
+            filters.add(Filters.eq("processDefinitionId", query.getProcessDefinitionId()));
+        }
+        if(query.getDeleteReason() != null) {
+            filters.add(Filters.eq("deleteReason", query.getDeleteReason()));
+        }
+        if(query.getActivityId() != null) {
+            filters.add(Filters.eq("activityId", query.getActivityId()));
+        }
+        if(query.getActivityName() != null) {
+            filters.add(Filters.eq("activityName", query.getActivityName()));
+        }
+        if(query.getActivityType() != null) {
+            filters.add(Filters.eq("activityType", query.getActivityType()));
+        }
+        if(query.getExecutionId() != null) {
+            filters.add(Filters.eq("executionId", query.getExecutionId()));
+        }
+        if(query.getAssignee() != null) {
+            filters.add(Filters.eq("assignee", query.getAssignee()));
+        }
+        if(query.getTenantId() != null) {
+            filters.add(Filters.eq("tenantId", query.getTenantId()));
+        }
+        return Filters.and(filters);
+    }
+
+    protected Bson createFilter(Map<String, Object> parameterMap) {
+        List<Bson> filters = new ArrayList<>();
+        if(parameterMap != null) {
+            for (Map.Entry<String, Object> entry : parameterMap.entrySet()) {
+                filters.add(Filters.eq(entry.getKey(), entry.getValue()));
+            }
+        }
+        return Filters.and(filters);
     }
 }

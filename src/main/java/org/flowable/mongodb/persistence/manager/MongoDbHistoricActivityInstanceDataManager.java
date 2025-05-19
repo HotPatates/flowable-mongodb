@@ -32,7 +32,15 @@ import com.mongodb.client.model.Filters;
 /**
  * @author Tijs Rademakers
  * @author Joram Barrez
+ * @author Patata
  */
+/* Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ */
+
 public class MongoDbHistoricActivityInstanceDataManager extends AbstractMongoDbDataManager<HistoricActivityInstanceEntity> implements HistoricActivityInstanceDataManager {
 
     public static final String COLLECTION_HISTORIC_ACTIVITY_INSTANCES = "historicActivityInstances";
@@ -53,7 +61,21 @@ public class MongoDbHistoricActivityInstanceDataManager extends AbstractMongoDbD
 
     @Override
     public BasicDBObject createUpdateObject(Entity entity) {
-        return null;
+        HistoricActivityInstanceEntity historicActivity = (HistoricActivityInstanceEntity) entity;
+        BasicDBObject update = new BasicDBObject();
+        update.append("executionId", historicActivity.getExecutionId());
+        update.append("processInstanceId", historicActivity.getProcessInstanceId());
+        update.append("processDefinitionId", historicActivity.getProcessDefinitionId());
+        update.append("activityId", historicActivity.getActivityId());
+        update.append("activityName", historicActivity.getActivityName());
+        update.append("activityType", historicActivity.getActivityType());
+        update.append("assignee", historicActivity.getAssignee());
+        update.append("startTime", historicActivity.getStartTime());
+        update.append("endTime", historicActivity.getEndTime());
+        update.append("durationInMillis", historicActivity.getDurationInMillis());
+        update.append("deleteReason", historicActivity.getDeleteReason());
+        update.append("tenantId", historicActivity.getTenantId());
+        return update;
     }
 
     @Override
@@ -64,12 +86,14 @@ public class MongoDbHistoricActivityInstanceDataManager extends AbstractMongoDbD
 
     @Override
     public List<HistoricActivityInstanceEntity> findHistoricActivityInstancesByExecutionIdAndActivityId(String executionId, String activityId) {
-        throw new UnsupportedOperationException();
+        Bson filter = Filters.and(Filters.eq("executionId", executionId), Filters.eq("activityId", activityId));
+        return getMongoDbSession().find(COLLECTION_HISTORIC_ACTIVITY_INSTANCES, filter);
     }
 
     @Override
     public List<HistoricActivityInstanceEntity> findUnfinishedHistoricActivityInstancesByProcessInstanceId(String processInstanceId) {
-        throw new UnsupportedOperationException();
+        Bson filter = Filters.and(Filters.eq("processInstanceId", processInstanceId), Filters.exists("endTime", false));
+        return getMongoDbSession().find(COLLECTION_HISTORIC_ACTIVITY_INSTANCES, filter);
     }
 
     @Override
@@ -78,82 +102,60 @@ public class MongoDbHistoricActivityInstanceDataManager extends AbstractMongoDbD
     }
 
     @Override
-    public long findHistoricActivityInstanceCountByQueryCriteria(HistoricActivityInstanceQueryImpl historicActivityInstanceQuery) {
-        return getMongoDbSession().count(COLLECTION_HISTORIC_ACTIVITY_INSTANCES, createFilter(historicActivityInstanceQuery));
+    public long findHistoricActivityInstanceCountByQueryCriteria(HistoricActivityInstanceQueryImpl query) {
+        return getMongoDbSession().count(COLLECTION_HISTORIC_ACTIVITY_INSTANCES, createFilter(query));
     }
 
     @Override
-    public List<HistoricActivityInstance> findHistoricActivityInstancesByQueryCriteria(HistoricActivityInstanceQueryImpl historicActivityInstanceQuery) {
-        return getMongoDbSession().find(COLLECTION_HISTORIC_ACTIVITY_INSTANCES, createFilter(historicActivityInstanceQuery));
+    public List<HistoricActivityInstance> findHistoricActivityInstancesByQueryCriteria(HistoricActivityInstanceQueryImpl query) {
+        return getMongoDbSession().find(COLLECTION_HISTORIC_ACTIVITY_INSTANCES, createFilter(query));
     }
 
     @Override
     public List<HistoricActivityInstance> findHistoricActivityInstancesByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
+        BasicDBObject filter = new BasicDBObject(parameterMap);
+        return getMongoDbSession().find(COLLECTION_HISTORIC_ACTIVITY_INSTANCES, filter);
     }
 
     @Override
     public long findHistoricActivityInstanceCountByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
+        BasicDBObject filter = new BasicDBObject(parameterMap);
+        return getMongoDbSession().count(COLLECTION_HISTORIC_ACTIVITY_INSTANCES, filter);
     }
 
     @Override
-    public void deleteHistoricActivityInstances(HistoricActivityInstanceQueryImpl historicActivityInstanceQuery) {
-        throw new UnsupportedOperationException();
+    public void deleteHistoricActivityInstances(HistoricActivityInstanceQueryImpl query) {
+        getMongoDbSession().bulkDelete(COLLECTION_HISTORIC_ACTIVITY_INSTANCES, createFilter(query));
     }
 
     @Override
     public void deleteHistoricActivityInstancesForNonExistingProcessInstances() {
-        throw new UnsupportedOperationException();
+        Bson filter = Filters.or(
+                Filters.eq("processInstanceId", null),
+                Filters.not(Filters.exists("processInstanceId"))
+        );
+        getMongoDbSession().bulkDelete(COLLECTION_HISTORIC_ACTIVITY_INSTANCES, filter);
     }
 
-    protected Bson createFilter(HistoricActivityInstanceQueryImpl activityInstanceQuery) {
+    protected Bson createFilter(HistoricActivityInstanceQueryImpl query) {
         List<Bson> filters = new ArrayList<>();
-        if (activityInstanceQuery.getExecutionId() != null) {
-            filters.add(Filters.eq("executionId", activityInstanceQuery.getExecutionId()));
-        }
-
-        if (activityInstanceQuery.getProcessInstanceId() != null) {
-            filters.add(Filters.eq("processInstanceId", activityInstanceQuery.getProcessInstanceId()));
-        }
-
-        if (activityInstanceQuery.getActivityId() != null) {
-            filters.add(Filters.eq("activityId", activityInstanceQuery.getActivityId()));
-        }
-
-        if (activityInstanceQuery.getActivityName() != null) {
-            filters.add(Filters.eq("activityName", activityInstanceQuery.getActivityName()));
-        }
-        if (activityInstanceQuery.getProcessDefinitionId() != null) {
-            filters.add(Filters.eq("processDefinitionId", activityInstanceQuery.getProcessDefinitionId()));
-        }
-        if (activityInstanceQuery.getActivityType() != null) {
-            filters.add(Filters.eq("activityType", activityInstanceQuery.getActivityType()));
-        }
-        if (activityInstanceQuery.getAssignee() != null) {
-            filters.add(Filters.eq("assignee", activityInstanceQuery.getAssignee()));
-        }
-        if (activityInstanceQuery.isFinished()) {
-            filters.add(Filters.not(Filters.exists("endTime")));
-        }
-        if (activityInstanceQuery.isUnfinished()) {
-            filters.add(Filters.exists("endTime"));
-        }
-        if (activityInstanceQuery.getDeleteReason() != null) {
-            filters.add(Filters.eq("deleteReason", activityInstanceQuery.getDeleteReason()));
-        }
-        if (activityInstanceQuery.getDeleteReasonLike() != null) {
-            filters.add(Filters.regex("deleteReason", activityInstanceQuery.getDeleteReasonLike().replace("%", ".*")));
-        }
-        if (activityInstanceQuery.getTenantId() != null) {
-            filters.add(Filters.eq("tenantId", activityInstanceQuery.getTenantId()));
-        }
-        if (activityInstanceQuery.getTenantIdLike() != null) {
-            filters.add(Filters.regex("tenantId", activityInstanceQuery.getTenantIdLike().replace("%", ".*")));
-        }
-        if (activityInstanceQuery.isWithoutTenantId()) {
+        if (query.getExecutionId() != null) filters.add(Filters.eq("executionId", query.getExecutionId()));
+        if (query.getProcessInstanceId() != null) filters.add(Filters.eq("processInstanceId", query.getProcessInstanceId()));
+        if (query.getActivityId() != null) filters.add(Filters.eq("activityId", query.getActivityId()));
+        if (query.getActivityName() != null) filters.add(Filters.eq("activityName", query.getActivityName()));
+        if (query.getProcessDefinitionId() != null) filters.add(Filters.eq("processDefinitionId", query.getProcessDefinitionId()));
+        if (query.getActivityType() != null) filters.add(Filters.eq("activityType", query.getActivityType()));
+        if (query.getAssignee() != null) filters.add(Filters.eq("assignee", query.getAssignee()));
+        if (query.isFinished()) filters.add(Filters.exists("endTime"));
+        if (query.isUnfinished()) filters.add(Filters.not(Filters.exists("endTime")));
+        if (query.getDeleteReason() != null) filters.add(Filters.eq("deleteReason", query.getDeleteReason()));
+        if (query.getDeleteReasonLike() != null) filters.add(Filters.regex("deleteReason", query.getDeleteReasonLike().replace("%", ".*")));
+        if (query.getTenantId() != null) filters.add(Filters.eq("tenantId", query.getTenantId()));
+        if (query.getTenantIdLike() != null) filters.add(Filters.regex("tenantId", query.getTenantIdLike().replace("%", ".*")));
+        if (query.isWithoutTenantId()) {
             filters.add(Filters.or(Filters.eq("tenantId", ProcessEngineConfiguration.NO_TENANT_ID), Filters.not(Filters.exists("tenantId"))));
         }
         return makeAndFilter(filters);
     }
 }
+

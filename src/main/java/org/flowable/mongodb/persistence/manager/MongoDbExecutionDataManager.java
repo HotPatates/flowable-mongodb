@@ -18,7 +18,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
+import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.flowable.common.engine.api.FlowableException;
 import org.flowable.common.engine.api.FlowableOptimisticLockingException;
@@ -140,110 +142,93 @@ public class MongoDbExecutionDataManager extends AbstractMongoDbDataManager<Exec
         if (executionQuery.getExecutionId() != null) {
             filters.add(Filters.eq("_id", executionQuery.getExecutionId()));
         }
-        if (executionQuery.getProcessDefinitionId() != null) {
-            filters.add(Filters.eq("processDefinitionId", executionQuery.getProcessDefinitionId()));
-        }
-        if (executionQuery.getProcessDefinitionIds() != null) {
-            filters.add(Filters.in("processDefinitionId", executionQuery.getProcessDefinitionId()));
-        }
-        if (executionQuery.getDeploymentId() != null) {
-            // TODO (done with join in relation counterpart)
-        }
-        if (executionQuery.getDeploymentIds() != null) {
-            // TODO (done with join in relation counterpart)
-        }
-        if (executionQuery.getProcessDefinitionKey() != null) {
-            // TODO (done with join in relation counterpart)
-        }
-        if (executionQuery.getProcessDefinitionKeys() != null) {
-            // TODO
-        }
-        if (executionQuery.getProcessDefinitionCategory() != null) {
-            // TODO (done with join in relation counterpart)
-        }
-        if (executionQuery.getProcessDefinitionName() != null) {
-            // TODO (done with join in relation counterpart)
-        }
-        if (executionQuery.getProcessDefinitionVersion() != null) {
-            // TODO (done with join in relation counterpart)
-        }
-        if (executionQuery.getProcessDefinitionEngineVersion() != null) {
-            // TODO (done with join in relation counterpart)
-        }
-        if (executionQuery.getActivityId() != null) {
-            filters.add(Filters.eq("activityId", executionQuery.getActivityId()));
-        }
+
         if (executionQuery.getProcessInstanceId() != null) {
             filters.add(Filters.eq("processInstanceId", executionQuery.getProcessInstanceId()));
         }
-        if (executionQuery.getParentId() != null) {
-            filters.add(Filters.eq("parentId", executionQuery.getParentId()));
-        }
-        if (executionQuery.isOnlyChildExecutions()) {
-            filters.add(Filters.exists("parentId"));
-        }
-        if (executionQuery.isOnlySubProcessExecutions()) {
-            // TODO
-        }
-        if (executionQuery.isOnlyProcessInstanceExecutions()) {
-            filters.add(Filters.not(Filters.exists("parentId")));
-        }
-        if (executionQuery.getRootProcessInstanceId() != null) {
-            filters.add(Filters.eq("rootProcessInstanceId", executionQuery.getRootProcessInstanceId()));
-        }
-        if (executionQuery.getStartedBefore() != null) {
-            filters.add(Filters.lt("startTime", executionQuery.getStartedBefore()));
-        }
-        if (executionQuery.getStartedAfter() != null) {
-            filters.add(Filters.gt("startTime", executionQuery.getStartedAfter()));
-        }
-        if (executionQuery.getStartedBy() != null) {
-            filters.add(Filters.eq("startedBy", executionQuery.getStartedBy()));
-        }
-        if (executionQuery.getSuperProcessInstanceId() != null) {
-            // TODO
-        }
-        if (executionQuery.getSubProcessInstanceId() != null) {
-            // TODO
-        }
-        if (executionQuery.isExcludeSubprocesses()) {
-            // TODO
-        }
-        if (executionQuery.getSuspensionState() != null) {
-            // TODO
-        }
-        if (executionQuery.getBusinessKey() != null) {
-            // TODO
-        }
-        if (executionQuery.isActive()) {
-            filters.add(Filters.eq("isActive", true));
-        }
-        if (executionQuery.getInvolvedGroups() != null) {
-            // TODO
-        }
-        if (executionQuery.getInvolvedUser() != null) {
-            // TODO
-        }
-        if (executionQuery.getName() != null) {
-            filters.add(Filters.eq("name", executionQuery.getName()));
-        }
-        if (executionQuery.getNameLike() != null) {
-            filters.add(Filters.regex("name", executionQuery.getNameLike().replace("%", ".*")));
-        }
-        if (executionQuery.getNameLikeIgnoreCase() != null) {
-            // TODO
-        }
-        if (executionQuery.getTenantId() != null) {
-            filters.add(Filters.eq("tenantId", executionQuery.getTenantId()));
-        }
-        if (executionQuery.getTenantIdLike() != null) {
-            filters.add(Filters.regex("tenantId", executionQuery.getTenantIdLike().replace("%", ".*")));
-        }
-        if (executionQuery.isWithoutTenantId()) {
-            filters.add(Filters.or(Filters.eq("tenantId", ProcessEngineConfiguration.NO_TENANT_ID), Filters.not(Filters.exists("tenantId"))));
+
+        if (executionQuery.getProcessDefinitionId() != null) {
+            filters.add(Filters.eq("processDefinitionId", executionQuery.getProcessDefinitionId()));
         }
 
-        return makeAndFilter(filters);
+        if (executionQuery.getProcessDefinitionIds() != null) {
+            filters.add(Filters.in("processDefinitionId", executionQuery.getProcessDefinitionIds()));
+        }
+
+        if (executionQuery.getDeploymentId() != null) {
+            filters.add(Filters.eq("deploymentId", executionQuery.getDeploymentId()));
+        }
+
+        if (executionQuery.getDeploymentIds() != null) {
+            filters.add(Filters.in("deploymentId", executionQuery.getDeploymentIds()));
+        }
+
+        if (executionQuery.getProcessDefinitionKey() != null) {
+            filters.add(Filters.eq("processDefinitionKey", executionQuery.getProcessDefinitionKey()));
+        }
+
+        if (executionQuery.getProcessDefinitionKeys() != null) {
+            filters.add(Filters.in("processDefinitionKey", executionQuery.getProcessDefinitionKeys()));
+        }
+
+        if (executionQuery.getProcessDefinitionCategory() != null) {
+            filters.add(Filters.eq("processDefinitionCategory", executionQuery.getProcessDefinitionCategory()));
+        }
+
+        if (executionQuery.getProcessDefinitionName() != null) {
+            filters.add(Filters.eq("processDefinitionName", executionQuery.getProcessDefinitionName()));
+        }
+
+        if (executionQuery.getProcessDefinitionVersion() != null) {
+            filters.add(Filters.eq("processDefinitionVersion", executionQuery.getProcessDefinitionVersion()));
+        }
+
+        if (executionQuery.getProcessDefinitionEngineVersion() != null) {
+            filters.add(Filters.eq("processDefinitionEngineVersion", executionQuery.getProcessDefinitionEngineVersion()));
+        }
+
+        if (executionQuery.isOnlySubProcessExecutions()) {
+            filters.add(Filters.exists("superExecutionId", true));
+        }
+
+        if (executionQuery.getSuperProcessInstanceId() != null) {
+            filters.add(Filters.eq("superProcessInstanceId", executionQuery.getSuperProcessInstanceId()));
+        }
+
+        if (executionQuery.getSubProcessInstanceId() != null) {
+            filters.add(Filters.eq("subProcessInstanceId", executionQuery.getSubProcessInstanceId()));
+        }
+
+        if (executionQuery.isExcludeSubprocesses()) {
+            filters.add(Filters.not(Filters.exists("superExecutionId")));
+        }
+
+        if (executionQuery.getSuspensionState() != null) {
+            filters.add(Filters.eq("suspensionState", executionQuery.getSuspensionState().getStateCode()));
+        }
+
+        if (executionQuery.getBusinessKey() != null) {
+            filters.add(Filters.eq("businessKey", executionQuery.getBusinessKey()));
+        }
+
+        if (executionQuery.getInvolvedGroups() != null) {
+            filters.add(Filters.in("involvedGroups", executionQuery.getInvolvedGroups()));
+        }
+
+        if (executionQuery.getInvolvedUser() != null) {
+            filters.add(Filters.eq("involvedUser", executionQuery.getInvolvedUser()));
+        }
+
+        if (executionQuery.getNameLikeIgnoreCase() != null) {
+            String pattern = executionQuery.getNameLikeIgnoreCase().replace("%", ".*");
+            filters.add(Filters.regex("name", Pattern.compile(pattern, Pattern.CASE_INSENSITIVE)));
+        }
+
+        if (filters.isEmpty()) {
+            return new Document();
+        }
+
+        return Filters.and(filters);
     }
 
     public long findProcessInstanceCountByQueryCriteria(ProcessInstanceQueryImpl executionQuery) {

@@ -17,6 +17,7 @@ import com.mongodb.BasicDBObject;
 public class MongoDbCommentDataManager extends AbstractMongoDbDataManager<CommentEntity> implements CommentDataManager {
 
     public static final String COLLECTION_COMMENTS = "comments";
+    public static final String COLLECTION_EVENTS = "events";
 
     public MongoDbCommentDataManager(MongoDbProcessEngineConfiguration processEngineConfiguration) {
         super(processEngineConfiguration);
@@ -94,12 +95,12 @@ public class MongoDbCommentDataManager extends AbstractMongoDbDataManager<Commen
 
     @Override
     public List<Event> findEventsByTaskId(String s) {
-        return List.of();//TODO
+        return getMongoDbSession().find(COLLECTION_EVENTS, new Document("taskId", s));
     }
 
     @Override
     public List<Event> findEventsByProcessInstanceId(String s) {
-        return List.of();//TODO
+        return getMongoDbSession().find(COLLECTION_EVENTS, new Document("processInstanceId", s));
     }
 
     @Override
@@ -147,8 +148,8 @@ public class MongoDbCommentDataManager extends AbstractMongoDbDataManager<Commen
     }
 
     @Override
-    public Event findEvent(String s) {
-        return null;//TODO
+    public Event findEvent(String commentId) {
+       return getMongoDbSession().findOne(COLLECTION_EVENTS, new Document("commentId", commentId));
     }
 
 }

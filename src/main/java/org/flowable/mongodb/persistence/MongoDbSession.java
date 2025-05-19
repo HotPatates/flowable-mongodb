@@ -618,4 +618,8 @@ public class MongoDbSession implements Session {
         this.entityCache = entityCache;
     }
 
+    public UpdateResult updateOne(String collection, Bson filter, Bson update) {
+        MongoCollection<Document> mongoDbCollection = getCollection(collection);
+        return mongoDbCollection.updateOne(clientSession, filter, new Document().append("$set", update));
+    }
 }

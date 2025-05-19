@@ -27,30 +27,7 @@ import org.flowable.eventsubscription.service.EventSubscriptionServiceConfigurat
 import org.flowable.identitylink.service.IdentityLinkServiceConfiguration;
 import org.flowable.job.service.JobServiceConfiguration;
 import org.flowable.mongodb.persistence.MongoDbSessionFactory;
-import org.flowable.mongodb.persistence.manager.AbstractMongoDbDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbActivityInstanceDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbCommentDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbDeploymentDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbEventSubscriptionDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbExecutionDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbExternalWorkerJobDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbHistoricActivityInstanceDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbHistoricDetailDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbHistoricIdentityLinkDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbHistoricProcessInstanceDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbHistoricTaskInstanceDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbHistoricVariableInstanceDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbIdentityLinkDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbJobDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbModelDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbProcessDefinitionDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbProcessDefinitionInfoDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbResourceDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbTaskDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbTimerJobDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbVariableInstanceDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbDeadLetterJobDataManager;
-import org.flowable.mongodb.persistence.manager.MongoDbSuspendedJobDataManager;
+import org.flowable.mongodb.persistence.manager.*;
 import org.flowable.mongodb.schema.MongoProcessSchemaManager;
 import org.flowable.mongodb.transaction.MongoDbTransactionContextFactory;
 import org.flowable.task.service.TaskServiceConfiguration;
@@ -204,6 +181,8 @@ public class MongoDbProcessEngineConfiguration extends ProcessEngineConfiguratio
         MongoDbHistoricDetailDataManager mongoDbHistoricDetailDataManager = new MongoDbHistoricDetailDataManager(this);
         this.historicDetailDataManager = mongoDbHistoricDetailDataManager;
 
+        MongoDbEventLogEntryDataManager mongoDbEventLogEntryDataManager = new MongoDbEventLogEntryDataManager(this);
+        this.eventLogEntryDataManager = mongoDbEventLogEntryDataManager;
     }
 
     @Override

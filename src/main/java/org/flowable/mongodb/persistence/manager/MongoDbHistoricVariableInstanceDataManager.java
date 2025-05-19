@@ -1,20 +1,12 @@
-/* Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.flowable.mongodb.persistence.manager;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import org.bson.conversions.Bson;
 import org.flowable.common.engine.impl.persistence.entity.Entity;
 import org.flowable.variable.api.history.HistoricVariableInstance;
 import org.flowable.variable.service.impl.HistoricVariableInstanceQueryImpl;
@@ -26,9 +18,6 @@ import org.flowable.variable.service.impl.persistence.entity.data.impl.cachematc
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Filters;
 
-/**
- * @author Tijs Rademakers
- */
 public class MongoDbHistoricVariableInstanceDataManager extends AbstractMongoDbDataManager<HistoricVariableInstanceEntity> implements HistoricVariableInstanceDataManager {
 
     public static final String COLLECTION_HISTORIC_VARIABLE_INSTANCES = "historicVariableInstances";
@@ -47,63 +36,94 @@ public class MongoDbHistoricVariableInstanceDataManager extends AbstractMongoDbD
 
     @Override
     public BasicDBObject createUpdateObject(Entity entity) {
-        return null;
+        HistoricVariableInstanceEntity var = (HistoricVariableInstanceEntity) entity;
+        BasicDBObject update = new BasicDBObject();
+        update.append("variableName", var.getVariableName());
+        update.append("variableTypeName", var.getVariableTypeName());
+        update.append("revision", var.getRevision());
+        update.append("scopeId", var.getScopeId());
+        update.append("subScopeId", var.getSubScopeId());
+        update.append("scopeType", var.getScopeType());
+        update.append("taskId", var.getTaskId());
+        update.append("executionId", var.getExecutionId());
+        update.append("processInstanceId", var.getProcessInstanceId());
+        update.append("value", var.getValue());
+        return update;
     }
 
     @Override
     public List<HistoricVariableInstanceEntity> findHistoricVariableInstancesByProcessInstanceId(String processInstanceId) {
         return getMongoDbSession().find(COLLECTION_HISTORIC_VARIABLE_INSTANCES, Filters.eq("processInstanceId", processInstanceId),
-            processInstanceId, HistoricVariableInstanceEntityImpl.class, historicVariableInstanceByProcInstMatcher);
+                processInstanceId, HistoricVariableInstanceEntityImpl.class, historicVariableInstanceByProcInstMatcher);
     }
 
     @Override
     public List<HistoricVariableInstanceEntity> findHistoricVariableInstancesByTaskId(String taskId) {
-        throw new UnsupportedOperationException();
+        return getMongoDbSession().find(COLLECTION_HISTORIC_VARIABLE_INSTANCES, Filters.eq("taskId", taskId));
     }
 
     @Override
-    public long findHistoricVariableInstanceCountByQueryCriteria(HistoricVariableInstanceQueryImpl historicProcessVariableQuery) {
-        throw new UnsupportedOperationException();
+    public long findHistoricVariableInstanceCountByQueryCriteria(HistoricVariableInstanceQueryImpl query) {
+        return getMongoDbSession().count(COLLECTION_HISTORIC_VARIABLE_INSTANCES, createFilter(query));
     }
 
     @Override
-    public List<HistoricVariableInstance> findHistoricVariableInstancesByQueryCriteria(HistoricVariableInstanceQueryImpl historicProcessVariableQuery) {
-        throw new UnsupportedOperationException();
+    public List<HistoricVariableInstance> findHistoricVariableInstancesByQueryCriteria(HistoricVariableInstanceQueryImpl query) {
+        return new ArrayList<>(getMongoDbSession().find(COLLECTION_HISTORIC_VARIABLE_INSTANCES, createFilter(query)));
     }
 
     @Override
     public HistoricVariableInstanceEntity findHistoricVariableInstanceByVariableInstanceId(String variableInstanceId) {
-        throw new UnsupportedOperationException();
+        return getMongoDbSession().findOne(COLLECTION_HISTORIC_VARIABLE_INSTANCES, Filters.eq("_id", variableInstanceId));
     }
 
     @Override
     public List<HistoricVariableInstanceEntity> findHistoricalVariableInstancesByScopeIdAndScopeType(String scopeId, String scopeType) {
-        throw new UnsupportedOperationException();
+        Bson filter = Filters.and(Filters.eq("scopeId", scopeId), Filters.eq("scopeType", scopeType));
+        return getMongoDbSession().find(COLLECTION_HISTORIC_VARIABLE_INSTANCES, filter);
     }
 
     @Override
     public List<HistoricVariableInstanceEntity> findHistoricalVariableInstancesBySubScopeIdAndScopeType(String subScopeId, String scopeType) {
-        throw new UnsupportedOperationException();
+        Bson filter = Filters.and(Filters.eq("subScopeId", subScopeId), Filters.eq("scopeType", scopeType));
+        return getMongoDbSession().find(COLLECTION_HISTORIC_VARIABLE_INSTANCES, filter);
     }
 
     @Override
     public List<HistoricVariableInstance> findHistoricVariableInstancesByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
+        BasicDBObject query = new BasicDBObject(parameterMap);
+        return getMongoDbSession().find(COLLECTION_HISTORIC_VARIABLE_INSTANCES, query);
     }
 
     @Override
     public long findHistoricVariableInstanceCountByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
+        BasicDBObject query = new BasicDBObject(parameterMap);
+        return getMongoDbSession().count(COLLECTION_HISTORIC_VARIABLE_INSTANCES, query);
     }
 
     @Override
     public void deleteHistoricVariableInstancesForNonExistingProcessInstances() {
-        throw new UnsupportedOperationException();
     }
 
     @Override
     public void deleteHistoricVariableInstancesForNonExistingCaseInstances() {
-        throw new UnsupportedOperationException();
     }
 
+    protected Bson createFilter(HistoricVariableInstanceQueryImpl query) {
+        List<Bson> filters = new ArrayList<>();
+        if (query.getTaskId() != null) {
+            filters.add(Filters.eq("taskId", query.getTaskId()));
+        }
+        if (query.getProcessInstanceId() != null) {
+            filters.add(Filters.eq("processInstanceId", query.getProcessInstanceId()));
+        }
+        if (query.getScopeId() != null) {
+            filters.add(Filters.eq("scopeId", query.getScopeId()));
+        }
+        if (query.getScopeType() != null) {
+            filters.add(Filters.eq("scopeType", query.getScopeType()));
+        }
+
+        return filters.isEmpty() ? new BasicDBObject() : Filters.and(filters);
+    }
 }
