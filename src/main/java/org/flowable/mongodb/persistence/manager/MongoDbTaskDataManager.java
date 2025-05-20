@@ -29,9 +29,6 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Sorts;
 
-/**
- * @author Joram Barrez
- */
 public class MongoDbTaskDataManager extends AbstractMongoDbDataManager<TaskEntity> implements TaskDataManager {
 
     public static final String COLLECTION_TASKS = "tasks";
@@ -49,32 +46,49 @@ public class MongoDbTaskDataManager extends AbstractMongoDbDataManager<TaskEntit
     @Override
     public BasicDBObject createUpdateObject(Entity entity) {
         TaskEntity taskEntity = (TaskEntity) entity;
-        BasicDBObject updateObject = null;
-        updateObject = setUpdateProperty(taskEntity, "assignee", taskEntity.getAssignee(), updateObject);
-        updateObject = setUpdateProperty(taskEntity, "owner", taskEntity.getOwner(), updateObject);
-        return updateObject;
+        BasicDBObject updateObject = new BasicDBObject();
+        if (taskEntity.getAssignee() != null) {
+            updateObject.put("assignee", taskEntity.getAssignee());
+        }
+        if (taskEntity.getOwner() != null) {
+            updateObject.put("owner", taskEntity.getOwner());
+        }
+        if (taskEntity.getName() != null) {
+            updateObject.put("name", taskEntity.getName());
+        }
+        if (taskEntity.getTenantId() != null) {
+            updateObject.put("tenantId", taskEntity.getTenantId());
+        }
+
+        return new BasicDBObject("$set", updateObject);
     }
 
     @Override
     public List<TaskEntity> findTasksByExecutionId(String executionId) {
-        Bson filter = Filters.eq("executionId", executionId);
-        return getMongoDbSession().find(COLLECTION_TASKS, filter);
+        return getMongoDbSession().find(COLLECTION_TASKS, Filters.eq("executionId", executionId));
     }
 
     @Override
     public List<TaskEntity> findTasksByProcessInstanceId(String processInstanceId) {
-        Bson filter = Filters.eq("processInstanceId", processInstanceId);
-        return getMongoDbSession().find(COLLECTION_TASKS, filter);
+        return getMongoDbSession().find(COLLECTION_TASKS, Filters.eq("processInstanceId", processInstanceId));
     }
 
     @Override
     public List<TaskEntity> findTasksByScopeIdAndScopeType(String scopeId, String scopeType) {
-        throw new UnsupportedOperationException();
+        Bson filter = Filters.and(
+                Filters.eq("scopeId", scopeId),
+                Filters.eq("scopeType", scopeType)
+        );
+        return getMongoDbSession().find(COLLECTION_TASKS, filter);
     }
 
     @Override
     public List<TaskEntity> findTasksBySubScopeIdAndScopeType(String subScopeId, String scopeType) {
-        throw new UnsupportedOperationException();
+        Bson filter = Filters.and(
+                Filters.eq("subScopeId", subScopeId),
+                Filters.eq("scopeType", scopeType)
+        );
+        return getMongoDbSession().find(COLLECTION_TASKS, filter);
     }
 
     @Override
@@ -90,17 +104,28 @@ public class MongoDbTaskDataManager extends AbstractMongoDbDataManager<TaskEntit
 
     @Override
     public List<Task> findTasksWithRelatedEntitiesByQueryCriteria(TaskQueryImpl taskQuery) {
-        throw new UnsupportedOperationException();
+        // MongoDB doesn't support joins natively; return regular tasks
+        return findTasksByQueryCriteria(taskQuery);
     }
 
     @Override
     public List<Task> findTasksByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
+        List<Bson> filters = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : parameterMap.entrySet()) {
+            filters.add(Filters.eq(entry.getKey(), entry.getValue()));
+        }
+        Bson filter = filters.isEmpty() ? new BasicDBObject() : Filters.and(filters);
+        return getMongoDbSession().find(COLLECTION_TASKS, filter);
     }
 
     @Override
     public long findTaskCountByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
+        List<Bson> filters = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : parameterMap.entrySet()) {
+            filters.add(Filters.eq(entry.getKey(), entry.getValue()));
+        }
+        Bson filter = filters.isEmpty() ? new BasicDBObject() : Filters.and(filters);
+        return getMongoDbSession().count(COLLECTION_TASKS, filter);
     }
 
     @Override
@@ -110,17 +135,19 @@ public class MongoDbTaskDataManager extends AbstractMongoDbDataManager<TaskEntit
 
     @Override
     public void updateTaskTenantIdForDeployment(String deploymentId, String newTenantId) {
-        throw new UnsupportedOperationException();
+        Bson filter = Filters.eq("deploymentId", deploymentId);
+        BasicDBObject update = new BasicDBObject("$set", new BasicDBObject("tenantId", newTenantId));
+        getMongoDbSession().bulkUpdate(COLLECTION_TASKS, filter, update);
     }
 
     @Override
     public void updateAllTaskRelatedEntityCountFlags(boolean newValue) {
-        throw new UnsupportedOperationException();
+        BasicDBObject update = new BasicDBObject("$set", new BasicDBObject("countEnabled", newValue));
+        getMongoDbSession().bulkUpdate(COLLECTION_TASKS, new BasicDBObject(), update);
     }
 
     @Override
     public void deleteTasksByExecutionId(String executionId) {
-        // TODO: add support for bulkDelete operation (cfr relational logic)
         List<TaskEntity> tasksEntities = findTasksByExecutionId(executionId);
         for (TaskEntity taskEntity : tasksEntities) {
             getMongoDbSession().delete(COLLECTION_TASKS, taskEntity);
@@ -128,58 +155,42 @@ public class MongoDbTaskDataManager extends AbstractMongoDbDataManager<TaskEntit
     }
 
     protected Bson createFilter(TaskQueryImpl taskQuery) {
-        List<Bson> andFilters = new ArrayList<>();
+        List<Bson> filters = new ArrayList<>();
+
         if (taskQuery.getExecutionId() != null) {
-            andFilters.add(Filters.eq("executionId", taskQuery.getExecutionId()));
+            filters.add(Filters.eq("executionId", taskQuery.getExecutionId()));
         }
-
         if (taskQuery.getProcessInstanceId() != null) {
-            andFilters.add(Filters.eq("processInstanceId", taskQuery.getProcessInstanceId()));
+            filters.add(Filters.eq("processInstanceId", taskQuery.getProcessInstanceId()));
         }
-
         if (taskQuery.getAssignee() != null) {
-            andFilters.add(Filters.eq("assignee", taskQuery.getAssignee()));
+            filters.add(Filters.eq("assignee", taskQuery.getAssignee()));
         }
-
         if (taskQuery.getUnassigned()) {
-            andFilters.add(Filters.eq("assignee", null));
+            filters.add(Filters.eq("assignee", null));
         }
-
         if (taskQuery.getName() != null) {
-            andFilters.add(Filters.eq("name", taskQuery.getName()));
+            filters.add(Filters.eq("name", taskQuery.getName()));
         }
 
-        Bson filter = null;
-        if (andFilters.size() > 0) {
-            filter = Filters.and(andFilters.toArray(new Bson[andFilters.size()]));
-        }
-
-        return filter;
+        return filters.isEmpty() ? new BasicDBObject() : Filters.and(filters);
     }
 
     protected Bson createSort(TaskQueryImpl taskQuery) {
         List<Bson> bsonSorts = new ArrayList<>();
-        for (String column : taskQuery.getOrderByColumnMap().keySet()) {
-            boolean isAscending = taskQuery.getOrderByColumnMap().get(column);
+        for (Map.Entry<String, Boolean> entry : taskQuery.getOrderByColumnMap().entrySet()) {
+            String column = entry.getKey();
+            boolean ascending = entry.getValue();
+
             String columnName = null;
             if (TaskQueryProperty.NAME.getName().equals(column)) {
                 columnName = "name";
             }
 
             if (columnName != null) {
-                if (isAscending) {
-                    bsonSorts.add(Sorts.ascending(columnName));
-                } else {
-                    bsonSorts.add(Sorts.descending(columnName));
-                }
+                bsonSorts.add(ascending ? Sorts.ascending(columnName) : Sorts.descending(columnName));
             }
         }
-
-        Bson bsonSortResult = null;
-        if (bsonSorts.size() > 0) {
-            bsonSortResult = Sorts.orderBy(bsonSorts);
-        }
-
-        return bsonSortResult;
+        return bsonSorts.isEmpty() ? null : Sorts.orderBy(bsonSorts);
     }
 }

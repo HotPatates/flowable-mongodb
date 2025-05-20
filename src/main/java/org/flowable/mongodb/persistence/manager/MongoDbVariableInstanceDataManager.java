@@ -1,15 +1,3 @@
-/* Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.flowable.mongodb.persistence.manager;
 
 import java.util.ArrayList;
@@ -30,9 +18,6 @@ import org.flowable.variable.service.impl.persistence.entity.data.impl.cachematc
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Filters;
 
-/**
- * @author Joram Barrez
- */
 public class MongoDbVariableInstanceDataManager extends AbstractMongoDbDataManager<VariableInstanceEntity> implements VariableInstanceDataManager {
 
     public static final String COLLECTION_VARIABLES = "variables";
@@ -61,91 +46,100 @@ public class MongoDbVariableInstanceDataManager extends AbstractMongoDbDataManag
         return updateObject;
     }
 
-
     @Override
-    public List<VariableInstanceEntity> findVariablesInstancesByQuery(InternalVariableInstanceQueryImpl internalVariableInstanceQuery) {
-
+    public List<VariableInstanceEntity> findVariablesInstancesByQuery(InternalVariableInstanceQueryImpl query) {
         List<Bson> filters = new ArrayList<>();
 
-        String name = internalVariableInstanceQuery.getName();
-        if (name != null) {
-            filters.add(Filters.eq("name", name));
+        if (query.getName() != null) {
+            filters.add(Filters.eq("name", query.getName()));
         }
 
-        String scopeId = internalVariableInstanceQuery.getScopeId();
-        String scopeType = internalVariableInstanceQuery.getScopeType();
-        if (scopeId != null && scopeType != null) {
-            filters.add(Filters.eq("scopeId", scopeId));
-            filters.add(Filters.eq("scopeType", scopeType));
+        if (query.getScopeId() != null && query.getScopeType() != null) {
+            filters.add(Filters.eq("scopeId", query.getScopeId()));
+            filters.add(Filters.eq("scopeType", query.getScopeType()));
         }
 
-        String taskId = internalVariableInstanceQuery.getTaskId();
-        if (taskId != null) {
-            filters.add(Filters.eq("taskId", taskId));
+        if (query.getTaskId() != null) {
+            filters.add(Filters.eq("taskId", query.getTaskId()));
         }
 
-        String executionId = internalVariableInstanceQuery.getExecutionId();
-        if (executionId != null) {
-            filters.add(Filters.eq("executionId", executionId));
+        if (query.getExecutionId() != null) {
+            filters.add(Filters.eq("executionId", query.getExecutionId()));
         }
 
-        if (!filters.isEmpty()) {
-            Bson finalFilter = Filters.and(filters.toArray(new Bson[0]));
-            return getMongoDbSession().find(COLLECTION_VARIABLES, finalFilter);
-        } else {
-            return getMongoDbSession().find(COLLECTION_VARIABLES, null);
-        }
+        Bson finalFilter = filters.isEmpty() ? null : Filters.and(filters);
+        return getMongoDbSession().find(COLLECTION_VARIABLES, finalFilter);
     }
 
     @Override
-    public VariableInstanceEntity findVariablesInstanceByQuery(InternalVariableInstanceQueryImpl internalVariableInstanceQuery) {
-        List<VariableInstanceEntity> variableInstanceEntities = findVariablesInstancesByQuery(internalVariableInstanceQuery);
-        if (variableInstanceEntities.size() > 1) {
-            throw new FlowableIllegalArgumentException("Query returned more than one result: " + variableInstanceEntities);
+    public VariableInstanceEntity findVariablesInstanceByQuery(InternalVariableInstanceQueryImpl query) {
+        List<VariableInstanceEntity> results = findVariablesInstancesByQuery(query);
+        if (results.size() > 1) {
+            throw new FlowableIllegalArgumentException("Query returned more than one result: " + results);
         }
-        if (variableInstanceEntities.size() == 1) {
-            return variableInstanceEntities.get(0);
-        }
-        return null;
+        return results.isEmpty() ? null : results.get(0);
     }
 
     @Override
     public void deleteVariablesByTaskId(String taskId) {
-        throw new UnsupportedOperationException();
+        Bson filter = Filters.eq("taskId", taskId);
+        getMongoDbSession().bulkDelete(COLLECTION_VARIABLES, filter);
     }
 
     protected List<VariableInstanceEntity> findVariableInstancesByExecutionId(String executionId) {
         return getMongoDbSession().find(COLLECTION_VARIABLES, Filters.eq("executionId", executionId), executionId,
-            VariableInstanceEntityImpl.class, variableInstanceByExecutionIdMatcher, true);
+                VariableInstanceEntityImpl.class, variableInstanceByExecutionIdMatcher, true);
     }
 
     @Override
     public void deleteVariablesByExecutionId(String executionId) {
         List<VariableInstanceEntity> variables = findVariableInstancesByExecutionId(executionId);
         if (variables != null) {
-            for (VariableInstanceEntity variableInstanceEntity : variables) {
-                getMongoDbSession().delete(COLLECTION_VARIABLES, variableInstanceEntity);
+            for (VariableInstanceEntity variable : variables) {
+                getMongoDbSession().delete(COLLECTION_VARIABLES, variable);
             }
         }
     }
 
     @Override
     public void deleteByScopeIdAndScopeType(String scopeId, String scopeType) {
-        throw new UnsupportedOperationException();
+        Bson filter = Filters.and(Filters.eq("scopeId", scopeId), Filters.eq("scopeType", scopeType));
+        getMongoDbSession().bulkDelete(COLLECTION_VARIABLES, filter);
     }
 
     @Override
     public void deleteByScopeIdAndScopeTypes(String scopeId, Collection<String> scopeTypes) {
-        throw new UnsupportedOperationException();
+        Bson filter = Filters.and(
+                Filters.eq("scopeId", scopeId),
+                Filters.in("scopeType", scopeTypes)
+        );
+        getMongoDbSession().bulkDelete(COLLECTION_VARIABLES, filter);
     }
 
     @Override
     public void deleteBySubScopeIdAndScopeTypes(String subScopeId, Collection<String> scopeTypes) {
-        // TODO
+        Bson filter = Filters.and(
+                Filters.eq("subScopeId", subScopeId),
+                Filters.in("scopeType", scopeTypes)
+        );
+        getMongoDbSession().bulkDelete(COLLECTION_VARIABLES, filter);
     }
 
     public VariableInstanceEntityImpl transformToEntity(Document document) {
-        throw new UnsupportedOperationException();
+        VariableInstanceEntityImpl variable = new VariableInstanceEntityImpl();
+        variable.setId(document.getString("_id"));
+        variable.setName(document.getString("name"));
+        variable.setTaskId(document.getString("taskId"));
+        variable.setExecutionId(document.getString("executionId"));
+        variable.setProcessInstanceId(document.getString("processInstanceId"));
+        variable.setScopeId(document.getString("scopeId"));
+        variable.setSubScopeId(document.getString("subScopeId"));
+        variable.setScopeType(document.getString("scopeType"));
+        variable.setTypeName(document.getString("typeName"));
+        variable.setTextValue(document.getString("textValue"));
+        variable.setTextValue2(document.getString("textValue2"));
+        variable.setDoubleValue(document.getDouble("doubleValue"));
+        variable.setLongValue(document.getLong("longValue"));
+        return variable;
     }
-
 }

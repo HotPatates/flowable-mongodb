@@ -1,17 +1,6 @@
-/* Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.flowable.mongodb.persistence.manager;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.flowable.common.engine.impl.persistence.entity.Entity;
@@ -21,13 +10,14 @@ import org.flowable.identitylink.service.impl.persistence.entity.data.IdentityLi
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Filters;
+import org.bson.conversions.Bson;
 
 /**
  * @author Joram Barrez
  */
 public class MongoDbIdentityLinkDataManager extends AbstractMongoDbDataManager<IdentityLinkEntity> implements IdentityLinkDataManager {
 
-    public static String COLLECTION_IDENTITY_LINKS = "identityLinks";
+    public static final String COLLECTION_IDENTITY_LINKS = "identityLinks";
 
     @Override
     public String getCollection() {
@@ -41,12 +31,24 @@ public class MongoDbIdentityLinkDataManager extends AbstractMongoDbDataManager<I
 
     @Override
     public BasicDBObject createUpdateObject(Entity entity) {
-        return null;
+        IdentityLinkEntity link = (IdentityLinkEntity) entity;
+        BasicDBObject update = new BasicDBObject();
+        update.append("userId", link.getUserId());
+        update.append("groupId", link.getGroupId());
+        update.append("taskId", link.getTaskId());
+        update.append("processInstanceId", link.getProcessInstanceId());
+        update.append("processDefinitionId", link.getProcessDefinitionId());
+        update.append("scopeId", link.getScopeId());
+        update.append("subScopeId", link.getSubScopeId());
+        update.append("scopeType", link.getScopeType());
+        update.append("scopeDefinitionId", link.getScopeDefinitionId());
+        update.append("type", link.getType());
+        return update;
     }
 
     @Override
     public List<IdentityLinkEntity> findIdentityLinksByTaskId(String taskId) {
-        return getMongoDbSession().find(COLLECTION_IDENTITY_LINKS, Filters.eq("taskId"));
+        return getMongoDbSession().find(COLLECTION_IDENTITY_LINKS, Filters.eq("taskId", taskId));
     }
 
     @Override
@@ -56,56 +58,106 @@ public class MongoDbIdentityLinkDataManager extends AbstractMongoDbDataManager<I
 
     @Override
     public List<IdentityLinkEntity> findIdentityLinksByProcessDefinitionId(String processDefinitionId) {
-        throw new UnsupportedOperationException();
+        return getMongoDbSession().find(COLLECTION_IDENTITY_LINKS, Filters.eq("processDefinitionId", processDefinitionId));
     }
 
     @Override
     public List<IdentityLinkEntity> findIdentityLinksByScopeIdAndType(String scopeId, String scopeType) {
-        throw new UnsupportedOperationException();
+        Bson filter = Filters.and(Filters.eq("scopeId", scopeId), Filters.eq("scopeType", scopeType));
+        return getMongoDbSession().find(COLLECTION_IDENTITY_LINKS, filter);
     }
 
     @Override
     public List<IdentityLinkEntity> findIdentityLinksBySubScopeIdAndType(String subScopeId, String scopeType) {
-        throw new UnsupportedOperationException();
+        Bson filter = Filters.and(Filters.eq("subScopeId", subScopeId), Filters.eq("scopeType", scopeType));
+        return getMongoDbSession().find(COLLECTION_IDENTITY_LINKS, filter);
     }
 
     @Override
     public List<IdentityLinkEntity> findIdentityLinksByScopeDefinitionIdAndType(String scopeDefinitionId, String scopeType) {
-        throw new UnsupportedOperationException();
+        Bson filter = Filters.and(Filters.eq("scopeDefinitionId", scopeDefinitionId), Filters.eq("scopeType", scopeType));
+        return getMongoDbSession().find(COLLECTION_IDENTITY_LINKS, filter);
     }
 
     @Override
     public List<IdentityLinkEntity> findIdentityLinkByTaskUserGroupAndType(String taskId, String userId, String groupId, String type) {
-        throw new UnsupportedOperationException();
+        List<Bson> filters = new ArrayList<>();
+        filters.add(Filters.eq("taskId", taskId));
+        if (userId != null) {
+            filters.add(Filters.eq("userId", userId));
+        }
+        if (groupId != null) {
+            filters.add(Filters.eq("groupId", groupId));
+        }
+        if (type != null) {
+            filters.add(Filters.eq("type", type));
+        }
+        return getMongoDbSession().find(COLLECTION_IDENTITY_LINKS, Filters.and(filters));
     }
 
     @Override
-    public List<IdentityLinkEntity> findIdentityLinkByProcessInstanceUserGroupAndType(String processInstanceId,
-            String userId, String groupId, String type) {
-        throw new UnsupportedOperationException();
+    public List<IdentityLinkEntity> findIdentityLinkByProcessInstanceUserGroupAndType(String processInstanceId, String userId, String groupId, String type) {
+        List<Bson> filters = new ArrayList<>();
+        filters.add(Filters.eq("processInstanceId", processInstanceId));
+        if (userId != null) {
+            filters.add(Filters.eq("userId", userId));
+        }
+        if (groupId != null) {
+            filters.add(Filters.eq("groupId", groupId));
+        }
+        if (type != null) {
+            filters.add(Filters.eq("type", type));
+        }
+        return getMongoDbSession().find(COLLECTION_IDENTITY_LINKS, Filters.and(filters));
     }
 
     @Override
-    public List<IdentityLinkEntity> findIdentityLinkByProcessDefinitionUserAndGroup(String processDefinitionId,
-            String userId, String groupId) {
-        throw new UnsupportedOperationException();
+    public List<IdentityLinkEntity> findIdentityLinkByProcessDefinitionUserAndGroup(String processDefinitionId, String userId, String groupId) {
+        List<Bson> filters = new ArrayList<>();
+        filters.add(Filters.eq("processDefinitionId", processDefinitionId));
+        if (userId != null) {
+            filters.add(Filters.eq("userId", userId));
+        }
+        if (groupId != null) {
+            filters.add(Filters.eq("groupId", groupId));
+        }
+        return getMongoDbSession().find(COLLECTION_IDENTITY_LINKS, Filters.and(filters));
     }
 
     @Override
-    public List<IdentityLinkEntity> findIdentityLinkByScopeIdScopeTypeUserGroupAndType(String scopeId, String scopeType,
-            String userId, String groupId, String type) {
-        throw new UnsupportedOperationException();
+    public List<IdentityLinkEntity> findIdentityLinkByScopeIdScopeTypeUserGroupAndType(String scopeId, String scopeType, String userId, String groupId, String type) {
+        List<Bson> filters = new ArrayList<>();
+        filters.add(Filters.eq("scopeId", scopeId));
+        filters.add(Filters.eq("scopeType", scopeType));
+        if (userId != null) {
+            filters.add(Filters.eq("userId", userId));
+        }
+        if (groupId != null) {
+            filters.add(Filters.eq("groupId", groupId));
+        }
+        if (type != null) {
+            filters.add(Filters.eq("type", type));
+        }
+        return getMongoDbSession().find(COLLECTION_IDENTITY_LINKS, Filters.and(filters));
     }
 
     @Override
-    public List<IdentityLinkEntity> findIdentityLinkByScopeDefinitionScopeTypeUserAndGroup(String scopeDefinitionId,
-            String scopeType, String userId, String groupId) {
-        throw new UnsupportedOperationException();
+    public List<IdentityLinkEntity> findIdentityLinkByScopeDefinitionScopeTypeUserAndGroup(String scopeDefinitionId, String scopeType, String userId, String groupId) {
+        List<Bson> filters = new ArrayList<>();
+        filters.add(Filters.eq("scopeDefinitionId", scopeDefinitionId));
+        filters.add(Filters.eq("scopeType", scopeType));
+        if (userId != null) {
+            filters.add(Filters.eq("userId", userId));
+        }
+        if (groupId != null) {
+            filters.add(Filters.eq("groupId", groupId));
+        }
+        return getMongoDbSession().find(COLLECTION_IDENTITY_LINKS, Filters.and(filters));
     }
 
     @Override
     public void deleteIdentityLinksByTaskId(String taskId) {
-        throw new UnsupportedOperationException();
+        getMongoDbSession().bulkDelete(COLLECTION_IDENTITY_LINKS, Filters.eq("taskId", taskId));
     }
 
     @Override
@@ -115,20 +167,22 @@ public class MongoDbIdentityLinkDataManager extends AbstractMongoDbDataManager<I
 
     @Override
     public void deleteIdentityLinksByProcessInstanceId(String processInstanceId) {
-        List<IdentityLinkEntity> identityLinks = findIdentityLinksByProcessInstanceId(processInstanceId);
-        for (IdentityLinkEntity identityLinkEntity : identityLinks) {
-            delete(identityLinkEntity);
-        }
+        getMongoDbSession().bulkDelete(COLLECTION_IDENTITY_LINKS, Filters.eq("processInstanceId", processInstanceId));
     }
 
     @Override
     public void deleteIdentityLinksByScopeIdAndScopeType(String scopeId, String scopeType) {
-        throw new UnsupportedOperationException();
+        getMongoDbSession().bulkDelete(COLLECTION_IDENTITY_LINKS, Filters.and(
+                Filters.eq("scopeId", scopeId),
+                Filters.eq("scopeType", scopeType)
+        ));
     }
 
     @Override
     public void deleteIdentityLinksByScopeDefinitionIdAndScopeType(String scopeDefinitionId, String scopeType) {
-        throw new UnsupportedOperationException();
+        getMongoDbSession().bulkDelete(COLLECTION_IDENTITY_LINKS, Filters.and(
+                Filters.eq("scopeDefinitionId", scopeDefinitionId),
+                Filters.eq("scopeType", scopeType)
+        ));
     }
-
 }

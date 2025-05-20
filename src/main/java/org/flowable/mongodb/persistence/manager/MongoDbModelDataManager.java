@@ -31,6 +31,8 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Sorts;
 
 /**
+ * MongoDB implementation of the ModelDataManager.
+ *
  * @author Joram Barrez
  */
 public class MongoDbModelDataManager extends AbstractMongoDbDataManager<ModelEntity> implements ModelDataManager {
@@ -48,7 +50,45 @@ public class MongoDbModelDataManager extends AbstractMongoDbDataManager<ModelEnt
 
     @Override
     public BasicDBObject createUpdateObject(Entity entity) {
-        return null;
+        MongoDbModelEntityImpl model = (MongoDbModelEntityImpl) entity;
+        BasicDBObject update = new BasicDBObject();
+
+        if (model.getName() != null) {
+            update.put("name", model.getName());
+        }
+        if (model.getKey() != null) {
+            update.put("key", model.getKey());
+        }
+        if (model.getCategory() != null) {
+            update.put("category", model.getCategory());
+        }
+        if (model.getCreateTime() != null) {
+            update.put("createTime", model.getCreateTime());
+        }
+        if (model.getLastUpdateTime() != null) {
+            update.put("lastUpdateTime", model.getLastUpdateTime());
+        }
+        if (model.getVersion() != null) {
+            update.put("version", model.getVersion());
+        }
+        if (model.getMetaInfo() != null) {
+            update.put("metaInfo", model.getMetaInfo());
+        }
+        if (model.getDeploymentId() != null) {
+            update.put("deploymentId", model.getDeploymentId());
+        }
+        if (model.getEditorSourceValueId() != null) {
+            update.put("editorSourceValueId", model.getEditorSourceValueId());
+        }
+        if (model.getEditorSourceExtraValueId() != null) {
+            update.put("editorSourceExtraValueId", model.getEditorSourceExtraValueId());
+        }
+        if (model.getTenantId() != null) {
+            update.put("tenantId", model.getTenantId());
+        }
+        update.put("latest", model.isLatest());
+
+        return update;
     }
 
     @Override
@@ -120,15 +160,15 @@ public class MongoDbModelDataManager extends AbstractMongoDbDataManager<ModelEnt
             filters.add(Filters.regex("tenantId", query.getTenantIdLike().replace("%", ".*")));
         }
         if (query.isDeployed()) {
-            filters.add(Filters.exists("deploymentId"));
+            filters.add(Filters.exists("deploymentId", true));
         }
         if (query.isNotDeployed()) {
-            filters.add(Filters.not(Filters.exists("deploymentId")));
+            filters.add(Filters.exists("deploymentId", false));
         }
         if (query.isWithoutTenantId()) {
             filters.add(Filters.or(
-                Filters.eq("tenantId", ProcessEngineConfiguration.NO_TENANT_ID),
-                Filters.not(Filters.exists("tenantId"))
+                    Filters.eq("tenantId", ProcessEngineConfiguration.NO_TENANT_ID),
+                    Filters.not(Filters.exists("tenantId"))
             ));
         }
         if (query.isLatest()) {
@@ -140,12 +180,22 @@ public class MongoDbModelDataManager extends AbstractMongoDbDataManager<ModelEnt
 
     @Override
     public List<Model> findModelsByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
+        Bson filter = mapToFilter(parameterMap);
+        return getMongoDbSession().find(COLLECTION_MODELS, filter);
     }
 
     @Override
     public long findModelCountByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
+        Bson filter = mapToFilter(parameterMap);
+        return getMongoDbSession().count(COLLECTION_MODELS, filter);
+    }
+
+    protected Bson mapToFilter(Map<String, Object> parameterMap) {
+        List<Bson> filters = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : parameterMap.entrySet()) {
+            filters.add(Filters.eq(entry.getKey(), entry.getValue()));
+        }
+        return makeAndFilter(filters);
     }
 
 }

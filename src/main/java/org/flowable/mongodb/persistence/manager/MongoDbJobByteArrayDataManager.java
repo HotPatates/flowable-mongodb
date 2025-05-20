@@ -1,15 +1,3 @@
-/* Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.flowable.mongodb.persistence.manager;
 
 import java.util.List;
@@ -23,6 +11,11 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Filters;
 
 /**
+ * MongoDB implementation of ByteArrayDataManager for jobs.
+ * Stores binary data associated with jobs (e.g., serialized objects or attachments).
+ *
+ * Note: This class uses a separate collection ("jobByteArrays") than the general byte array storage.
+ *
  * @author Joram Barrez
  */
 public class MongoDbJobByteArrayDataManager extends AbstractMongoDbDataManager<ByteArrayEntity> implements ByteArrayDataManager {
@@ -41,12 +34,17 @@ public class MongoDbJobByteArrayDataManager extends AbstractMongoDbDataManager<B
 
     @Override
     public BasicDBObject createUpdateObject(Entity entity) {
-        return null;
+        ByteArrayEntity byteArray = (ByteArrayEntity) entity;
+        BasicDBObject update = new BasicDBObject();
+        update.append("name", byteArray.getName());
+        update.append("bytes", byteArray.getBytes());
+        update.append("deploymentId", byteArray.getDeploymentId());
+        return update;
     }
 
     @Override
     public List<ByteArrayEntity> findAll() {
-        throw new UnsupportedOperationException();
+        return getMongoDbSession().find(COLLECTION_JOB_BYTE_ARRAY,null);
     }
 
     @Override

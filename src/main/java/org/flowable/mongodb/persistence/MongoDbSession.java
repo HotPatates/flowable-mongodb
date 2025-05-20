@@ -622,4 +622,9 @@ public class MongoDbSession implements Session {
         MongoCollection<Document> mongoDbCollection = getCollection(collection);
         return mongoDbCollection.updateOne(clientSession, filter, new Document().append("$set", update));
     }
+
+    public UpdateResult bulkUpdate(String collection, Bson filter, Bson update) {
+        MongoCollection<Document> mongoDbCollection = getCollection(collection);
+        return mongoDbCollection.updateMany(clientSession, filter, new Document().append("$set", update));
+    }
 }

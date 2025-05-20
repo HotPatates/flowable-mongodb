@@ -6,8 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.flowable.mongodb.persistence.manager;
@@ -29,10 +29,8 @@ import org.flowable.mongodb.persistence.entity.MongoDbProcessDefinitionEntityImp
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Filters;
 
-/**
- * @author Joram Barrez
- */
-public class MongoDbProcessDefinitionDataManager extends AbstractMongoDbDataManager<ProcessDefinitionEntity> implements ProcessDefinitionDataManager {
+public class MongoDbProcessDefinitionDataManager extends AbstractMongoDbDataManager<ProcessDefinitionEntity>
+        implements ProcessDefinitionDataManager {
 
     public static final String COLLECTION_PROCESS_DEFINITIONS = "processDefinitions";
 
@@ -62,12 +60,14 @@ public class MongoDbProcessDefinitionDataManager extends AbstractMongoDbDataMana
 
     @Override
     public void insert(ProcessDefinitionEntity entity) {
-        MongoDbProcessDefinitionEntityImpl latestProcessDefinitionEntity = (MongoDbProcessDefinitionEntityImpl)
-            findLatestProcessDefinitionByKeyAndTenantId(entity.getKey(), entity.getTenantId());
-        if (latestProcessDefinitionEntity == null) {
-            ((MongoDbProcessDefinitionEntityImpl) entity).setLatest(true);
-        } else if (entity.getVersion() > latestProcessDefinitionEntity.getVersion()) {
-            latestProcessDefinitionEntity.setLatest(false);
+        MongoDbProcessDefinitionEntityImpl latest = (MongoDbProcessDefinitionEntityImpl)
+                findLatestProcessDefinitionByKeyAndTenantId(entity.getKey(), entity.getTenantId());
+
+        if (latest == null || entity.getVersion() > latest.getVersion()) {
+            if (latest != null) {
+                latest.setLatest(false);
+                getMongoDbSession().update(entity);
+            }
             ((MongoDbProcessDefinitionEntityImpl) entity).setLatest(true);
         }
 
@@ -75,32 +75,27 @@ public class MongoDbProcessDefinitionDataManager extends AbstractMongoDbDataMana
     }
 
     @Override
-    public ProcessDefinitionEntity findLatestProcessDefinitionByKey(String processDefinitionKey) {
-        // TODO. Not all properties included yet. Check the mybatis query for all details.
+    public ProcessDefinitionEntity findLatestProcessDefinitionByKey(String key) {
         return getMongoDbSession().findOne(COLLECTION_PROCESS_DEFINITIONS,
-            Filters.and(
-                Filters.eq("key", processDefinitionKey),
-                Filters.eq("latest",true)
-            ));
+                Filters.and(Filters.eq("key", key), Filters.eq("latest", true)));
     }
 
     @Override
-    public ProcessDefinitionEntity findLatestProcessDefinitionByKeyAndTenantId(String processDefinitionKey, String tenantId) {
-        return getMongoDbSession().findOne(COLLECTION_PROCESS_DEFINITIONS, Filters.and(
-            Filters.eq("key", processDefinitionKey),
-            Filters.eq("latest", true),
-            Filters.eq("tenantId", tenantId)
-        ));
+    public ProcessDefinitionEntity findLatestProcessDefinitionByKeyAndTenantId(String key, String tenantId) {
+        return getMongoDbSession().findOne(COLLECTION_PROCESS_DEFINITIONS,
+                Filters.and(Filters.eq("key", key), Filters.eq("latest", true), Filters.eq("tenantId", tenantId)));
     }
 
     @Override
-    public ProcessDefinitionEntity findLatestDerivedProcessDefinitionByKey(String processDefinitionKey) {
-        throw new UnsupportedOperationException();
+    public ProcessDefinitionEntity findLatestDerivedProcessDefinitionByKey(String key) {
+        return getMongoDbSession().findOne(COLLECTION_PROCESS_DEFINITIONS,
+                Filters.and(Filters.eq("key", key), Filters.eq("derivedFrom", true), Filters.eq("latest", true)));
     }
 
     @Override
-    public ProcessDefinitionEntity findLatestDerivedProcessDefinitionByKeyAndTenantId(String processDefinitionKey, String tenantId) {
-        throw new UnsupportedOperationException();
+    public ProcessDefinitionEntity findLatestDerivedProcessDefinitionByKeyAndTenantId(String key, String tenantId) {
+        return getMongoDbSession().findOne(COLLECTION_PROCESS_DEFINITIONS,
+                Filters.and(Filters.eq("key", key), Filters.eq("derivedFrom", true), Filters.eq("latest", true), Filters.eq("tenantId", tenantId)));
     }
 
     @Override
@@ -109,170 +104,117 @@ public class MongoDbProcessDefinitionDataManager extends AbstractMongoDbDataMana
     }
 
     @Override
-    public List<ProcessDefinition> findProcessDefinitionsByQueryCriteria(ProcessDefinitionQueryImpl processDefinitionQuery) {
-        return getMongoDbSession().find(COLLECTION_PROCESS_DEFINITIONS, createFilter(processDefinitionQuery));
+    public List<ProcessDefinition> findProcessDefinitionsByQueryCriteria(ProcessDefinitionQueryImpl query) {
+        return getMongoDbSession().find(COLLECTION_PROCESS_DEFINITIONS, createFilter(query));
     }
 
     @Override
-    public long findProcessDefinitionCountByQueryCriteria(ProcessDefinitionQueryImpl processDefinitionQuery) {
-        return getMongoDbSession().count(COLLECTION_PROCESS_DEFINITIONS, createFilter(processDefinitionQuery));
+    public long findProcessDefinitionCountByQueryCriteria(ProcessDefinitionQueryImpl query) {
+        return getMongoDbSession().count(COLLECTION_PROCESS_DEFINITIONS, createFilter(query));
+    }
+
+    @Override
+    public ProcessDefinitionEntity findProcessDefinitionByDeploymentAndKey(String deploymentId, String key) {
+        return getMongoDbSession().findOne(COLLECTION_PROCESS_DEFINITIONS,
+                Filters.and(Filters.eq("deploymentId", deploymentId), Filters.eq("key", key),
+                        Filters.or(Filters.eq("tenantId", ProcessEngineConfiguration.NO_TENANT_ID),
+                                Filters.not(Filters.exists("tenantId")))));
+    }
+
+    @Override
+    public ProcessDefinitionEntity findProcessDefinitionByDeploymentAndKeyAndTenantId(String deploymentId, String key, String tenantId) {
+        return getMongoDbSession().findOne(COLLECTION_PROCESS_DEFINITIONS,
+                Filters.and(Filters.eq("deploymentId", deploymentId), Filters.eq("key", key), Filters.eq("tenantId", tenantId)));
+    }
+
+    @Override
+    public ProcessDefinitionEntity findProcessDefinitionByParentDeploymentAndKey(String parentDeploymentId, String key) {
+        return getMongoDbSession().findOne(COLLECTION_PROCESS_DEFINITIONS,
+                Filters.and(Filters.eq("parentDeploymentId", parentDeploymentId), Filters.eq("key", key)));
+    }
+
+    @Override
+    public ProcessDefinitionEntity findProcessDefinitionByParentDeploymentAndKeyAndTenantId(String parentDeploymentId, String key, String tenantId) {
+        return getMongoDbSession().findOne(COLLECTION_PROCESS_DEFINITIONS,
+                Filters.and(Filters.eq("parentDeploymentId", parentDeploymentId), Filters.eq("key", key), Filters.eq("tenantId", tenantId)));
+    }
+
+    @Override
+    public ProcessDefinitionEntity findProcessDefinitionByKeyAndVersion(String key, Integer version) {
+        return getMongoDbSession().findOne(COLLECTION_PROCESS_DEFINITIONS,
+                Filters.and(Filters.eq("key", key), Filters.eq("version", version),
+                        Filters.or(Filters.eq("tenantId", ProcessEngineConfiguration.NO_TENANT_ID),
+                                Filters.not(Filters.exists("tenantId")))));
+    }
+
+    @Override
+    public ProcessDefinitionEntity findProcessDefinitionByKeyAndVersionAndTenantId(String key, Integer version, String tenantId) {
+        return getMongoDbSession().findOne(COLLECTION_PROCESS_DEFINITIONS,
+                Filters.and(Filters.eq("key", key), Filters.eq("version", version), Filters.eq("tenantId", tenantId)));
+    }
+
+    @Override
+    public List<ProcessDefinition> findProcessDefinitionsByNativeQuery(Map<String, Object> parameterMap) {
+        Bson filter = createBsonFromParameters(parameterMap);
+        return getMongoDbSession().find(COLLECTION_PROCESS_DEFINITIONS, filter);
+    }
+
+    @Override
+    public long findProcessDefinitionCountByNativeQuery(Map<String, Object> parameterMap) {
+        Bson filter = createBsonFromParameters(parameterMap);
+        return getMongoDbSession().count(COLLECTION_PROCESS_DEFINITIONS, filter);
+    }
+
+    @Override
+    public void updateProcessDefinitionTenantIdForDeployment(String deploymentId, String newTenantId) {
+        Bson filter = Filters.eq("deploymentId", deploymentId);
+        BasicDBObject update = new BasicDBObject("$set", new BasicDBObject("tenantId", newTenantId));
+        getMongoDbSession().bulkUpdate(COLLECTION_PROCESS_DEFINITIONS, filter, update);
+    }
+
+    @Override
+    public void updateProcessDefinitionVersionForProcessDefinitionId(String processDefinitionId, int version) {
+        Bson filter = Filters.eq("_id", processDefinitionId);
+        BasicDBObject update =  new BasicDBObject("version", version);
+        getMongoDbSession().updateOne(COLLECTION_PROCESS_DEFINITIONS, filter, update);
     }
 
     protected Bson createFilter(ProcessDefinitionQueryImpl query) {
         List<Bson> filters = new ArrayList<>();
-        if (query.getId() != null) {
-            filters.add(Filters.eq("_id", query.getId()));
-        }
-        if (query.getIds() != null) {
-            filters.add(Filters.in("_id", query.getIds()));
-        }
-        if (query.getCategory() != null) {
-            filters.add(Filters.eq("category", query.getCategory()));
-        }
-        if (query.getCategoryLike() != null) {
-            filters.add(Filters.regex("category", query.getCategoryLike()));
-        }
-        if (query.getCategoryNotEquals() != null) {
-            filters.add(Filters.not(Filters.eq("category", query.getCategoryNotEquals())));
-        }
-        if (query.getName() != null) {
-            filters.add(Filters.eq("name", query.getName()));
-        }
-        if (query.getNameLike() != null) {
-            filters.add(Filters.regex("name", query.getNameLike()));
-        }
-        if (query.getDeploymentId() != null) {
-            filters.add(Filters.eq("deploymentId", query.getDeploymentId()));
-        }
-        if (query.getDeploymentIds() != null) {
-            filters.add(Filters.in("deploymentIds", query.getDeploymentIds()));
-        }
-        if (query.getKey() != null) {
-            filters.add(Filters.eq("key", query.getKey()));
-        }
-        if (query.getKeyLike() != null) {
-            filters.add(Filters.regex("key", query.getKeyLike()));
-        }
-        if (query.getResourceName() != null) {
-            filters.add(Filters.eq("resourceName", query.getResourceName()));
-        }
-        if (query.getResourceNameLike() != null) {
-            filters.add(Filters.regex("resourceName", query.getResourceNameLike()));
-        }
-        if (query.getVersion() != null) {
-            filters.add(Filters.eq("version", query.getVersion()));
-        }
-        if (query.getVersionGt() != null) {
-            filters.add(Filters.gt("version", query.getVersionGt()));
-        }
-        if (query.getVersionGte() != null) {
-            filters.add(Filters.gte("version", query.getVersionGte()));
-        }
-        if (query.getVersionLt() != null) {
-            filters.add(Filters.lt("version", query.getVersionLt()));
-        }
-        if (query.getVersionLte() != null) {
-            filters.add(Filters.lte("version", query.getVersionLte()));
-        }
-        if (query.isLatest()) {
-            filters.add(Filters.eq("latest", true));
-        }
-        if (query.getSuspensionState() != null) {
-            filters.add(Filters.eq("suspensionState", query.getSuspensionState().getStateCode()));
-        }
-        if (query.getAuthorizationUserId() != null) {
-            throw new UnsupportedOperationException();
-        }
-        if (query.getProcDefId() != null) {
-            // TODO: check if this property is correct. Looks wrong.
-            throw new UnsupportedOperationException();
-        }
-        if (query.getEngineVersion() != null) {
-            filters.add(Filters.eq("engineVersion", query.getEngineVersion()));
-        }
-        if (query.getTenantId() != null) {
-            filters.add(Filters.eq("tenantId", query.getTenantId()));
-        }
-        if (query.getTenantIdLike() != null) {
-            filters.add(Filters.regex("tenantId", query.getTenantIdLike().replace("%", ".*")));
-        }
+        if (query.getId() != null) filters.add(Filters.eq("_id", query.getId()));
+        if (query.getIds() != null) filters.add(Filters.in("_id", query.getIds()));
+        if (query.getCategory() != null) filters.add(Filters.eq("category", query.getCategory()));
+        if (query.getCategoryLike() != null) filters.add(Filters.regex("category", query.getCategoryLike()));
+        if (query.getCategoryNotEquals() != null) filters.add(Filters.ne("category", query.getCategoryNotEquals()));
+        if (query.getName() != null) filters.add(Filters.eq("name", query.getName()));
+        if (query.getNameLike() != null) filters.add(Filters.regex("name", query.getNameLike()));
+        if (query.getDeploymentId() != null) filters.add(Filters.eq("deploymentId", query.getDeploymentId()));
+        if (query.getDeploymentIds() != null) filters.add(Filters.in("deploymentId", query.getDeploymentIds()));
+        if (query.getKey() != null) filters.add(Filters.eq("key", query.getKey()));
+        if (query.getKeyLike() != null) filters.add(Filters.regex("key", query.getKeyLike()));
+        if (query.getResourceName() != null) filters.add(Filters.eq("resourceName", query.getResourceName()));
+        if (query.getResourceNameLike() != null) filters.add(Filters.regex("resourceName", query.getResourceNameLike()));
+        if (query.getVersion() != null) filters.add(Filters.eq("version", query.getVersion()));
+        if (query.getVersionGt() != null) filters.add(Filters.gt("version", query.getVersionGt()));
+        if (query.getVersionGte() != null) filters.add(Filters.gte("version", query.getVersionGte()));
+        if (query.getVersionLt() != null) filters.add(Filters.lt("version", query.getVersionLt()));
+        if (query.getVersionLte() != null) filters.add(Filters.lte("version", query.getVersionLte()));
+        if (query.isLatest()) filters.add(Filters.eq("latest", true));
+        if (query.getSuspensionState() != null) filters.add(Filters.eq("suspensionState", query.getSuspensionState().getStateCode()));
+        if (query.getEngineVersion() != null) filters.add(Filters.eq("engineVersion", query.getEngineVersion()));
+        if (query.getTenantId() != null) filters.add(Filters.eq("tenantId", query.getTenantId()));
+        if (query.getTenantIdLike() != null) filters.add(Filters.regex("tenantId", query.getTenantIdLike().replace("%", ".*")));
         if (query.isWithoutTenantId()) {
             filters.add(Filters.or(Filters.eq("tenantId", ProcessEngineConfiguration.NO_TENANT_ID), Filters.not(Filters.exists("tenantId"))));
         }
         return makeAndFilter(filters);
     }
 
-    @Override
-    public ProcessDefinitionEntity findProcessDefinitionByDeploymentAndKey(String deploymentId, String processDefinitionKey) {
-        return getMongoDbSession().findOne(COLLECTION_PROCESS_DEFINITIONS,
-            Filters.and(
-               Filters.eq("deploymentId", deploymentId),
-               Filters.eq("key", processDefinitionKey),
-               Filters.or(
-                   Filters.eq("tenantId", ProcessEngineConfiguration.NO_TENANT_ID),
-                   Filters.not(Filters.exists("tenantId")))
-            ));
+    protected Bson createBsonFromParameters(Map<String, Object> parameterMap) {
+        List<Bson> filters = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : parameterMap.entrySet()) {
+            filters.add(Filters.eq(entry.getKey(), entry.getValue()));
+        }
+        return makeAndFilter(filters);
     }
-
-    @Override
-    public ProcessDefinitionEntity findProcessDefinitionByDeploymentAndKeyAndTenantId(String deploymentId, String processDefinitionKey, String tenantId) {
-        return getMongoDbSession().findOne(COLLECTION_PROCESS_DEFINITIONS,
-            Filters.and(
-                Filters.eq("deploymentId", deploymentId),
-                Filters.eq("key", processDefinitionKey),
-                Filters.eq("tenantId", tenantId)
-            ));
-    }
-    @Override
-    public ProcessDefinitionEntity findProcessDefinitionByParentDeploymentAndKey(String parentDeploymentId, String processDefinitionKey) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ProcessDefinitionEntity findProcessDefinitionByParentDeploymentAndKeyAndTenantId(String parentDeploymentId, String processDefinitionKey, String tenantId) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ProcessDefinitionEntity findProcessDefinitionByKeyAndVersion(String processDefinitionKey, Integer processDefinitionVersion) {
-        return getMongoDbSession().findOne(COLLECTION_PROCESS_DEFINITIONS,
-            Filters.and(
-                Filters.eq("key", processDefinitionKey),
-                Filters.eq("version", processDefinitionVersion),
-                Filters.or(
-                    Filters.eq("tenantId", ProcessEngineConfiguration.NO_TENANT_ID),
-                    Filters.not(Filters.exists("tenantId")))
-            ));
-    }
-
-    @Override
-    public ProcessDefinitionEntity findProcessDefinitionByKeyAndVersionAndTenantId(String processDefinitionKey, Integer processDefinitionVersion, String tenantId) {
-        return getMongoDbSession().findOne(COLLECTION_PROCESS_DEFINITIONS,
-            Filters.and(
-                Filters.eq("key", processDefinitionKey),
-                Filters.eq("version", processDefinitionVersion),
-                Filters.eq("tenantId", tenantId)
-            ));
-    }
-
-    @Override
-    public List<ProcessDefinition> findProcessDefinitionsByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long findProcessDefinitionCountByNativeQuery(Map<String, Object> parameterMap) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void updateProcessDefinitionTenantIdForDeployment(String deploymentId, String newTenantId) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void updateProcessDefinitionVersionForProcessDefinitionId(String processDefinitionId, int version) {
-        throw new UnsupportedOperationException();
-    }
-
 }
