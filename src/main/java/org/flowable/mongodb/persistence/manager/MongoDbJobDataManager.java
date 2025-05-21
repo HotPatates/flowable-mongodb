@@ -9,6 +9,7 @@ import org.flowable.common.engine.impl.Page;
 import org.flowable.common.engine.impl.persistence.entity.Entity;
 import org.flowable.engine.ProcessEngineConfiguration;
 import org.flowable.job.api.Job;
+import org.flowable.job.api.JobInfo;
 import org.flowable.job.service.JobServiceConfiguration;
 import org.flowable.job.service.impl.JobQueryImpl;
 import org.flowable.job.service.impl.persistence.entity.JobEntity;
@@ -127,6 +128,11 @@ public class MongoDbJobDataManager extends AbstractMongoDbDataManager<JobEntity>
         Bson filter = Filters.eq("deploymentId", deploymentId);
         Bson update = Updates.set("tenantId", newTenantId);
         getMongoDbSession().bulkUpdate(COLLECTION_JOBS, filter, update);
+    }
+
+    @Override
+    public void bulkUpdateJobLockWithoutRevisionCheck(List<JobEntity> jobEntities, String lockOwner, Date lockExpirationTime) {
+        getMongoDbSession().bulkDelete(COLLECTION_JOBS,Filters.in("_id", jobEntities.stream().map(JobInfo::getId).toArray()));
     }
 
     @Override

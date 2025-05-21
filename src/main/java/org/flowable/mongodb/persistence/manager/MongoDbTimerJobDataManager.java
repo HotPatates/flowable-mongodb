@@ -14,6 +14,7 @@ package org.flowable.mongodb.persistence.manager;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 import org.bson.conversions.Bson;
@@ -170,6 +171,11 @@ public class MongoDbTimerJobDataManager extends AbstractMongoDbDataManager<Timer
         return getMongoDbSession().count(COLLECTION_TIMER_JOBS, createFilter(timerJobQuery));
     }
 
+    @Override
+    public void bulkDeleteWithoutRevision(List<TimerJobEntity> timerJobEntities) {
+        getMongoDbSession().bulkDelete(COLLECTION_TIMER_JOBS,Filters.in("_id", timerJobEntities.stream().map(TimerJobEntity::getId).toArray()));
+    }
+
     protected Bson createFilter(TimerJobQueryImpl query) {
         List<Bson> filters = new ArrayList<>();
         if (query.getId() != null) filters.add(Filters.eq("_id", query.getId()));
@@ -204,6 +210,13 @@ public class MongoDbTimerJobDataManager extends AbstractMongoDbDataManager<Timer
         Bson filter = Filters.eq("deploymentId", deploymentId);
         Bson update = Updates.set("tenantId", newTenantId);
         getMongoDbSession().bulkUpdate(COLLECTION_TIMER_JOBS, filter, update);
+    }
+
+    @Override
+    public void bulkUpdateJobLockWithoutRevisionCheck(List<TimerJobEntity> jobEntities, String lockOwner, Date lockExpirationTime) {
+        jobEntities.forEach(jobEntity -> {
+            getMongoDbSession().update(jobEntity);
+        });
     }
 
     @Override

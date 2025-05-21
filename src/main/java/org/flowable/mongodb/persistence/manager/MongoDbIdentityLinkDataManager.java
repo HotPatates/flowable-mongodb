@@ -1,9 +1,11 @@
 package org.flowable.mongodb.persistence.manager;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.flowable.common.engine.impl.persistence.entity.Entity;
+import org.flowable.identitylink.api.history.HistoricIdentityLink;
 import org.flowable.identitylink.service.impl.persistence.entity.IdentityLinkEntity;
 import org.flowable.identitylink.service.impl.persistence.entity.IdentityLinkEntityImpl;
 import org.flowable.identitylink.service.impl.persistence.entity.data.IdentityLinkDataManager;
@@ -44,6 +46,11 @@ public class MongoDbIdentityLinkDataManager extends AbstractMongoDbDataManager<I
         update.append("scopeDefinitionId", link.getScopeDefinitionId());
         update.append("type", link.getType());
         return update;
+    }
+
+    @Override
+    public IdentityLinkEntity createIdentityLinkFromHistoricIdentityLink(HistoricIdentityLink historicIdentityLink) {
+        return new IdentityLinkEntityImpl(historicIdentityLink);
     }
 
     @Override
@@ -182,6 +189,14 @@ public class MongoDbIdentityLinkDataManager extends AbstractMongoDbDataManager<I
     public void deleteIdentityLinksByScopeDefinitionIdAndScopeType(String scopeDefinitionId, String scopeType) {
         getMongoDbSession().bulkDelete(COLLECTION_IDENTITY_LINKS, Filters.and(
                 Filters.eq("scopeDefinitionId", scopeDefinitionId),
+                Filters.eq("scopeType", scopeType)
+        ));
+    }
+
+    @Override
+    public void bulkDeleteIdentityLinksForScopeIdsAndScopeType(Collection<String> scopeIds, String scopeType) {
+        getMongoDbSession().bulkDelete(COLLECTION_IDENTITY_LINKS, Filters.and(
+                Filters.in("scopeId",scopeIds),
                 Filters.eq("scopeType", scopeType)
         ));
     }

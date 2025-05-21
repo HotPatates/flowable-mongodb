@@ -52,4 +52,9 @@ public class MongoDbJobByteArrayDataManager extends AbstractMongoDbDataManager<B
         getMongoDbSession().bulkDelete(COLLECTION_JOB_BYTE_ARRAY, Filters.eq("_id", byteArrayEntityId));
     }
 
+    @Override
+    public void bulkDeleteByteArraysNoRevisionCheck(List<String> byteArrayEntityIds) {
+        getMongoDbSession().bulkDelete(COLLECTION_JOB_BYTE_ARRAY, Filters.in("_id", byteArrayEntityIds));
+    }
+
 }

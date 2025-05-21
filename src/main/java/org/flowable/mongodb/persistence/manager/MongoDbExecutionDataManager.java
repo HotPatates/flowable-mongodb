@@ -313,7 +313,13 @@ public class MongoDbExecutionDataManager extends AbstractMongoDbDataManager<Exec
     }
 
     public long findExecutionCountByNativeQuery(Map<String, Object> parameterMap) {
-        return 0;
+        BasicDBObject query = new BasicDBObject(parameterMap);
+        return getMongoDbSession().count(COLLECTION_EXECUTIONS, query);
+    }
+
+    @Override
+    public long countActiveExecutionsByParentId(String parentId) {
+        return getMongoDbSession().count(COLLECTION_EXECUTIONS, Filters.eq("parentId", parentId));
     }
 
     public void updateExecutionTenantIdForDeployment(String deploymentId, String newTenantId) {

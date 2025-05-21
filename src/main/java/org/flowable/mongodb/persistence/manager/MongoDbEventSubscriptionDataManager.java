@@ -3,6 +3,7 @@
 package org.flowable.mongodb.persistence.manager;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.bson.conversions.Bson;
@@ -123,6 +124,8 @@ public class MongoDbEventSubscriptionDataManager extends AbstractMongoDbDataMana
         return getMongoDbSession().find(COLLECTION_EVENT_SUBSCRIPTION, filter);
     }
 
+
+
     @Override
     public List<EventSubscriptionEntity> findEventSubscriptionsByProcessInstanceAndActivityId(String processInstanceId, String activityId, String type) {
         Bson filter = Filters.and(
@@ -147,6 +150,8 @@ public class MongoDbEventSubscriptionDataManager extends AbstractMongoDbDataMana
         );
         return getMongoDbSession().find(COLLECTION_EVENT_SUBSCRIPTION, filter);
     }
+
+
 
     @Override
     public List<EventSubscriptionEntity> findEventSubscriptionsByName(String type, String eventName, String tenantId) {
@@ -214,6 +219,8 @@ public class MongoDbEventSubscriptionDataManager extends AbstractMongoDbDataMana
         getMongoDbSession().bulkDelete(COLLECTION_EVENT_SUBSCRIPTION, filter);
     }
 
+
+
     @Override
     public void updateEventSubscriptionTenantId(String oldTenantId, String newTenantId) {
         List<EventSubscriptionEntity> subs = getMongoDbSession().find(
@@ -223,6 +230,110 @@ public class MongoDbEventSubscriptionDataManager extends AbstractMongoDbDataMana
             getMongoDbSession().update(sub);
         }
     }
+
+
+    @Override
+    public void deleteEventSubscriptionsForScopeDefinitionIdAndTypeAndNullScopeId(String scopeDefinitionId, String scopeType) {
+        Bson filter = Filters.and(
+                Filters.eq("scopeDefinitionId", scopeDefinitionId),
+                Filters.eq("scopeType", scopeType),
+                Filters.or(Filters.eq("scopeId", null), Filters.not(Filters.exists("scopeId")))
+        );
+        getMongoDbSession().bulkDelete(getCollection(), filter);
+    }
+
+    @Override
+    public void deleteEventSubscriptionsForProcessDefinitionAndProcessStartEvent(String processDefinitionId, String eventType, String activityId, String configuration) {
+        Bson filter = Filters.and(
+                Filters.eq("processDefinitionId", processDefinitionId),
+                Filters.eq("eventType", eventType),
+                Filters.eq("activityId", activityId),
+                Filters.eq("configuration", configuration),
+                Filters.eq("isStartEvent", true)
+        );
+        getMongoDbSession().bulkDelete(getCollection(), filter);
+    }
+
+    @Override
+    public void deleteEventSubscriptionsForScopeDefinitionAndScopeStartEvent(String scopeDefinitionId, String eventType, String configuration) {
+        Bson filter = Filters.and(
+                Filters.eq("scopeDefinitionId", scopeDefinitionId),
+                Filters.eq("eventType", eventType),
+                Filters.eq("configuration", configuration),
+                Filters.eq("isStartEvent", true)
+        );
+        getMongoDbSession().bulkDelete(getCollection(), filter);
+    }
+
+    @Override
+    public List<EventSubscriptionEntity> findEventSubscriptionsByScopeIdAndType(String scopeId, String type) {
+        Bson filter = Filters.and(
+                Filters.eq("scopeId", scopeId),
+                Filters.eq("eventType", type)
+        );
+        return getMongoDbSession().find(getCollection(), filter);
+    }
+
+    @Override
+    public List<EventSubscriptionEntity> findEventSubscriptionsByProcessInstanceAndType(String processInstanceId, String type) {
+        Bson filter = Filters.and(
+                Filters.eq("processInstanceId", processInstanceId),
+                Filters.eq("eventType", type)
+        );
+        return getMongoDbSession().find(getCollection(), filter);
+    }
+
+    @Override
+    public void updateEventSubscriptionProcessDefinitionId(String oldProcessDefinitionId, String newProcessDefinitionId, String eventType, String activityId, String scopeDefinitionKey, String configuration) {
+        Bson filter = Filters.and(
+                Filters.eq("processDefinitionId", oldProcessDefinitionId),
+                Filters.eq("eventType", eventType),
+                Filters.eq("activityId", activityId),
+                Filters.eq("configuration", configuration),
+                Filters.eq("scopeDefinitionKey", scopeDefinitionKey)
+        );
+        BasicDBObject update = new BasicDBObject("$set", new BasicDBObject("processDefinitionId", newProcessDefinitionId));
+        getMongoDbSession().updateOne(getCollection(), filter, update);
+    }
+
+    @Override
+    public void updateEventSubscriptionScopeDefinitionId(String oldScopeDefinitionId, String newScopeDefinitionId, String eventType, String scopeDefinitionKey, String configuration) {
+        Bson filter = Filters.and(
+                Filters.eq("scopeDefinitionId", oldScopeDefinitionId),
+                Filters.eq("eventType", eventType),
+                Filters.eq("configuration", configuration),
+                Filters.eq("scopeDefinitionKey", scopeDefinitionKey)
+        );
+        BasicDBObject update = new BasicDBObject("$set", new BasicDBObject("scopeDefinitionId", newScopeDefinitionId));
+        getMongoDbSession().updateOne(getCollection(), filter, update);
+    }
+
+    @Override
+    public boolean updateEventSubscriptionLockTime(String eventSubscriptionId, Date lockDate, String lockOwner, Date currentTime) {
+        Bson filter = Filters.and(
+                Filters.eq("_id", eventSubscriptionId),
+                Filters.or(
+                        Filters.lt("lockExpirationTime", currentTime),
+                        Filters.eq("lockExpirationTime", null)
+                )
+        );
+
+        BasicDBObject update = new BasicDBObject("$set", new BasicDBObject()
+                .append("lockExpirationTime", lockDate)
+                .append("lockOwner", lockOwner));
+
+        return getMongoDbSession().updateOne(getCollection(), filter, update).getModifiedCount() > 0;
+    }
+
+    @Override
+    public void clearEventSubscriptionLockTime(String eventSubscriptionId) {
+        Bson filter = Filters.eq("_id", eventSubscriptionId);
+        BasicDBObject update = new BasicDBObject("$unset", new BasicDBObject()
+                .append("lockExpirationTime", "")
+                .append("lockOwner", ""));
+        getMongoDbSession().updateOne(getCollection(), filter, update);
+    }
+
 
     @Override
     public void deleteEventSubscriptionsForProcessDefinition(String processDefinitionId) {

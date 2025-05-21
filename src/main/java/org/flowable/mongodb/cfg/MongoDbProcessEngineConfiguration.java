@@ -21,7 +21,6 @@ import org.flowable.common.engine.impl.persistence.GenericManagerFactory;
 import org.flowable.common.engine.impl.persistence.StrongUuidGenerator;
 import org.flowable.common.engine.impl.persistence.cache.EntityCache;
 import org.flowable.common.engine.impl.persistence.cache.EntityCacheImpl;
-import org.flowable.engine.impl.SchemaOperationsProcessEngineBuild;
 import org.flowable.engine.impl.cfg.ProcessEngineConfigurationImpl;
 import org.flowable.eventsubscription.service.EventSubscriptionServiceConfiguration;
 import org.flowable.identitylink.service.IdentityLinkServiceConfiguration;
@@ -126,13 +125,12 @@ public class MongoDbProcessEngineConfiguration extends ProcessEngineConfiguratio
         this.schemaManager = new MongoProcessSchemaManager();
     }
 
+    @Override
     public void initSchemaManagementCommand() {
-        // Impl note: the schemaMgmtCmd of the regular impl is reused, as it will delegate to the MongoProcessSchemaManager class
         if (schemaManagementCmd == null) {
-            this.schemaManagementCmd = new SchemaOperationsProcessEngineBuild();
+            this.schemaManagementCmd = new MongoSchemaManagementCommand(processSchemaManager);
         }
     }
-
     @Override
     public CommandInterceptor createTransactionInterceptor() {
         return null;

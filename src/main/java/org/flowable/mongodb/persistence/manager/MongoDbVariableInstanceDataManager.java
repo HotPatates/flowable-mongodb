@@ -1,15 +1,14 @@
 package org.flowable.mongodb.persistence.manager;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.common.engine.impl.persistence.entity.Entity;
+import org.flowable.variable.api.persistence.entity.VariableInstance;
 import org.flowable.variable.service.impl.InternalVariableInstanceQueryImpl;
+import org.flowable.variable.service.impl.VariableInstanceQueryImpl;
 import org.flowable.variable.service.impl.persistence.entity.VariableInstanceEntity;
 import org.flowable.variable.service.impl.persistence.entity.VariableInstanceEntityImpl;
 import org.flowable.variable.service.impl.persistence.entity.data.VariableInstanceDataManager;
@@ -48,6 +47,12 @@ public class MongoDbVariableInstanceDataManager extends AbstractMongoDbDataManag
 
     @Override
     public List<VariableInstanceEntity> findVariablesInstancesByQuery(InternalVariableInstanceQueryImpl query) {
+        Bson filter=createFilter(query);
+
+        return getMongoDbSession().find(COLLECTION_VARIABLES, filter);
+    }
+
+    private Bson createFilter(InternalVariableInstanceQueryImpl query) {
         List<Bson> filters = new ArrayList<>();
 
         if (query.getName() != null) {
@@ -66,9 +71,25 @@ public class MongoDbVariableInstanceDataManager extends AbstractMongoDbDataManag
         if (query.getExecutionId() != null) {
             filters.add(Filters.eq("executionId", query.getExecutionId()));
         }
+        return !filters.isEmpty()?Filters.and(filters):new Document();
+    }
+    private Bson createFilter(VariableInstanceQueryImpl query) {
+        List<Bson> filters = new ArrayList<>();
 
-        Bson finalFilter = filters.isEmpty() ? null : Filters.and(filters);
-        return getMongoDbSession().find(COLLECTION_VARIABLES, finalFilter);
+
+        if (query.getScopeId() != null && query.getScopeType() != null) {
+            filters.add(Filters.eq("scopeId", query.getScopeId()));
+            filters.add(Filters.eq("scopeType", query.getScopeType()));
+        }
+
+        if (query.getTaskId() != null) {
+            filters.add(Filters.eq("taskId", query.getTaskId()));
+        }
+
+        if (query.getExecutionId() != null) {
+            filters.add(Filters.eq("executionId", query.getExecutionId()));
+        }
+        return !filters.isEmpty()?Filters.and(filters):new Document();
     }
 
     @Override
@@ -78,6 +99,27 @@ public class MongoDbVariableInstanceDataManager extends AbstractMongoDbDataManag
             throw new FlowableIllegalArgumentException("Query returned more than one result: " + results);
         }
         return results.isEmpty() ? null : results.get(0);
+    }
+
+    @Override
+    public long findVariableInstanceCountByQueryCriteria(VariableInstanceQueryImpl variableInstanceQuery) {
+        return getMongoDbSession().count(COLLECTION_VARIABLES,createFilter(variableInstanceQuery));
+    }
+
+    @Override
+    public List<VariableInstance> findVariableInstancesByQueryCriteria(VariableInstanceQueryImpl variableInstanceQuery) {
+        return getMongoDbSession().find(COLLECTION_VARIABLES, createFilter(variableInstanceQuery));
+    }
+
+    @Override
+    public List<VariableInstance> findVariableInstancesByNativeQuery(Map<String, Object> parameterMap) {
+        BasicDBObject query = new BasicDBObject(parameterMap);
+        return getMongoDbSession().find(COLLECTION_VARIABLES, query);
+    }
+
+    @Override
+    public long findVariableInstanceCountByNativeQuery(Map<String, Object> parameterMap) {
+        return 0;
     }
 
     @Override

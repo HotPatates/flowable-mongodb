@@ -13,6 +13,7 @@
 package org.flowable.mongodb.persistence.manager;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 import org.bson.conversions.Bson;
@@ -86,6 +87,16 @@ public class MongoDbExternalWorkerJobDataManager extends AbstractMongoDbDataMana
     }
 
     @Override
+    public List<ExternalWorkerJobEntity> findJobsByWorkerId(String workerId) {
+        return getMongoDbSession().find(COLLECTION_EXTERNAL_WORKER_JOBS, Filters.eq("workerId", workerId));
+    }
+
+    @Override
+    public List<ExternalWorkerJobEntity> findJobsByWorkerIdAndTenantId(String workerId, String tenantId) {
+        return getMongoDbSession().find(COLLECTION_EXTERNAL_WORKER_JOBS, Filters.and(Filters.eq("workerId", workerId), Filters.eq("tenantId", tenantId)));
+    }
+
+    @Override
     public List<ExternalWorkerJobEntity> findJobsToExecute(List<String> enabledCategories, Page page) {
         Bson filter = Filters.in("category", enabledCategories);
         return getMongoDbSession().find(COLLECTION_EXTERNAL_WORKER_JOBS, filter);
@@ -120,6 +131,13 @@ public class MongoDbExternalWorkerJobDataManager extends AbstractMongoDbDataMana
             job.setTenantId(newTenantId);
             getMongoDbSession().update(job);
         }
+    }
+
+    @Override
+    public void bulkUpdateJobLockWithoutRevisionCheck(List<ExternalWorkerJobEntity> jobEntities, String lockOwner, Date lockExpirationTime) {
+        jobEntities.forEach(jobEntity -> {
+            getMongoDbSession().update(jobEntity);
+        });
     }
 
     @Override

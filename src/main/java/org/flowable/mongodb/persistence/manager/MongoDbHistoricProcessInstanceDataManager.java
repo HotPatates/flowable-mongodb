@@ -12,10 +12,7 @@
  */
 package org.flowable.mongodb.persistence.manager;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.bson.conversions.Bson;
@@ -86,6 +83,11 @@ public class MongoDbHistoricProcessInstanceDataManager extends AbstractMongoDbDa
     }
 
     @Override
+    public List<String> findHistoricProcessInstanceIdsBySuperProcessInstanceIds(Collection<String> superProcessInstanceIds) {
+        return getMongoDbSession().find(COLLECTION_HISTORIC_PROCESS_INSTANCES,Filters.in("superProcessInstanceId", superProcessInstanceIds));
+    }
+
+    @Override
     public List<HistoricProcessInstance> findHistoricProcessInstancesByQueryCriteria(HistoricProcessInstanceQueryImpl historicProcessInstanceQuery) {
         return getMongoDbSession().find(COLLECTION_HISTORIC_PROCESS_INSTANCES, createFilter(historicProcessInstanceQuery));
     }
@@ -116,6 +118,11 @@ public class MongoDbHistoricProcessInstanceDataManager extends AbstractMongoDbDa
     @Override
     public void deleteHistoricProcessInstances(HistoricProcessInstanceQueryImpl historicProcessInstanceQuery) {
         getMongoDbSession().delete(COLLECTION_HISTORIC_PROCESS_INSTANCES, getMongoDbSession().findOne(COLLECTION_HISTORIC_PROCESS_INSTANCES,createFilter(historicProcessInstanceQuery)));
+    }
+
+    @Override
+    public void bulkDeleteHistoricProcessInstances(Collection<String> processInstanceIds) {
+        getMongoDbSession().bulkDelete(COLLECTION_HISTORIC_PROCESS_INSTANCES, Filters.in("processInstanceId", processInstanceIds));
     }
 
     protected Bson createFilter(HistoricProcessInstanceQueryImpl processInstanceQuery) {

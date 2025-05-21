@@ -13,6 +13,7 @@
 package org.flowable.mongodb.persistence.manager;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +25,7 @@ import org.flowable.engine.impl.HistoricActivityInstanceQueryImpl;
 import org.flowable.engine.impl.persistence.entity.HistoricActivityInstanceEntity;
 import org.flowable.engine.impl.persistence.entity.HistoricActivityInstanceEntityImpl;
 import org.flowable.engine.impl.persistence.entity.data.HistoricActivityInstanceDataManager;
+import org.flowable.engine.runtime.ActivityInstance;
 import org.flowable.mongodb.cfg.MongoDbProcessEngineConfiguration;
 
 import com.mongodb.BasicDBObject;
@@ -79,6 +81,11 @@ public class MongoDbHistoricActivityInstanceDataManager extends AbstractMongoDbD
     }
 
     @Override
+    public HistoricActivityInstanceEntity create(ActivityInstance activityInstance) {
+        return new HistoricActivityInstanceEntityImpl(activityInstance);
+    }
+
+    @Override
     public List<HistoricActivityInstanceEntity> findUnfinishedHistoricActivityInstancesByExecutionAndActivityId(String executionId, String activityId) {
         Bson filter = Filters.and(Filters.eq("executionId", executionId), Filters.eq("activityId", activityId));
         return getMongoDbSession().find(COLLECTION_HISTORIC_ACTIVITY_INSTANCES, filter);
@@ -126,6 +133,11 @@ public class MongoDbHistoricActivityInstanceDataManager extends AbstractMongoDbD
     @Override
     public void deleteHistoricActivityInstances(HistoricActivityInstanceQueryImpl query) {
         getMongoDbSession().bulkDelete(COLLECTION_HISTORIC_ACTIVITY_INSTANCES, createFilter(query));
+    }
+
+    @Override
+    public void bulkDeleteHistoricActivityInstancesByProcessInstanceIds(Collection<String> historicProcessInstanceIds) {
+        getMongoDbSession().bulkDelete(COLLECTION_HISTORIC_ACTIVITY_INSTANCES, Filters.in("processInstanceId", historicProcessInstanceIds));
     }
 
     @Override

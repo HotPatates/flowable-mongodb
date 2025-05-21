@@ -13,6 +13,7 @@
 package org.flowable.mongodb.persistence.manager;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -76,8 +77,27 @@ public class MongoDbHistoricTaskInstanceDataManager extends AbstractMongoDbDataM
     }
 
     @Override
+    public List<String> findHistoricTaskIdsByParentTaskIds(Collection<String> parentTaskIds) {
+        return getMongoDbSession().find(COLLECTION_HISTORIC_TASK_INSTANCES, Filters.in("parentTaskId", parentTaskIds));
+    }
+
+    @Override
     public List<HistoricTaskInstanceEntity> findHistoricTasksByProcessInstanceId(String processInstanceId) {
         return getMongoDbSession().find(COLLECTION_HISTORIC_TASK_INSTANCES, Filters.eq("processInstanceId", processInstanceId));
+    }
+
+    @Override
+    public List<String> findHistoricTaskIdsForProcessInstanceIds(Collection<String> processInstanceIds) {
+        return getMongoDbSession().find(COLLECTION_HISTORIC_TASK_INSTANCES, Filters.in("processInstanceId", processInstanceIds));
+    }
+
+    @Override
+    public List<String> findHistoricTaskIdsForScopeIdsAndScopeType(Collection<String> scopeIds, String scopeType) {
+        return getMongoDbSession().find(COLLECTION_HISTORIC_TASK_INSTANCES, Filters.and(
+                Filters.eq("scopeId", scopeIds),
+                       Filters.eq("scopeType", scopeType)
+                )
+        );
     }
 
     @Override
@@ -114,6 +134,11 @@ public class MongoDbHistoricTaskInstanceDataManager extends AbstractMongoDbDataM
         getMongoDbSession().find(COLLECTION_HISTORIC_TASK_INSTANCES,createFilter(query)).forEach(taskInstance -> {
             getMongoDbSession().delete(COLLECTION_HISTORIC_TASK_INSTANCES,(HistoricTaskInstanceEntity) taskInstance);
         });
+    }
+
+    @Override
+    public void bulkDeleteHistoricTaskInstancesForIds(Collection<String> taskIds) {
+        getMongoDbSession().bulkDelete(COLLECTION_HISTORIC_TASK_INSTANCES, Filters.in("taskId", taskIds));
     }
 
     @Override

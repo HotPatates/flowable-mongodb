@@ -308,34 +308,43 @@ public class MongoProcessSchemaManager implements SchemaManager {
 
     @Override
     public String schemaUpdate() {
-        
         MongoDbProcessEngineConfiguration engineConfiguration = getEngineConfiguration();
         String currentSchemaVersion = getVersion(engineConfiguration.getMongoDatabase());
-        
+
         if (currentSchemaVersion == null) {
+            LOGGER.info("No schema version found. Creating schema...");
             schemaCreate();
-            
+            return FlowableVersions.CURRENT_VERSION;
+
         } else if (!FlowableVersions.CURRENT_VERSION.equals(currentSchemaVersion)) {
+            LOGGER.info("Detected outdated schema version: {}. Updating to {}...",
+                    currentSchemaVersion, FlowableVersions.CURRENT_VERSION);
+
             try {
                 waitForLock(engineConfiguration);
                 currentSchemaVersion = getVersion(engineConfiguration.getMongoDatabase());
+
                 if (!FlowableVersions.CURRENT_VERSION.equals(currentSchemaVersion)) {
-                    // TODO in future release (if needed): loop from current version to latest version and apply updates programmatically
-                    // Note that the wait and release of the lock also need to happen in this case
+                    // For now, we recreate the schema (or drop & recreate as needed).
+                    // You can implement migrations here in the future.
+                    LOGGER.warn("Schema version mismatch after lock. Forcing schema recreate.");
+                    schemaDrop();
+                    schemaCreate();
                 }
-                
+
             } finally {
                 releaseLock(engineConfiguration);
             }
-            
+
+            return FlowableVersions.CURRENT_VERSION;
+
         } else {
-            LOGGER.info("Schema is up to date");
-            
+            LOGGER.info("Schema is up to date.");
+            return currentSchemaVersion;
         }
-        
-        return null;
     }
-    
+
+
     @Override
     public void schemaCheckVersion() {
         String version = getVersion(getEngineConfiguration().getMongoDatabase());
@@ -343,7 +352,12 @@ public class MongoProcessSchemaManager implements SchemaManager {
             throw new FlowableException("Invalid version. Current schema version is " + version);
         }
     }
-    
+
+    @Override
+    public String getContext() {
+        return "bpmn";
+    }
+
     protected String getVersion(MongoDatabase mongoDatabase) {
         boolean propertiesCollectionExists = propertiesCollectionExists(mongoDatabase);
         if (propertiesCollectionExists) {

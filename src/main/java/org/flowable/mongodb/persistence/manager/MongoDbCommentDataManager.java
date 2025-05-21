@@ -1,8 +1,10 @@
 package org.flowable.mongodb.persistence.manager;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
+import com.mongodb.client.model.Filters;
 import org.bson.Document;
 import org.flowable.common.engine.impl.persistence.entity.Entity;
 import org.flowable.engine.impl.persistence.entity.CommentEntity;
@@ -115,6 +117,22 @@ public class MongoDbCommentDataManager extends AbstractMongoDbDataManager<Commen
         findCommentsByProcessInstanceId(processInstanceId).forEach(comment -> {
             delete(comment.getId());
         });
+    }
+
+    @Override
+    public void bulkDeleteCommentsForTaskIds(Collection<String> taskIds) {
+        if (taskIds == null || taskIds.isEmpty()) {
+            return;
+        }
+        getMongoDbSession().bulkDelete(COLLECTION_COMMENTS, Filters.in("taskId", taskIds));
+    }
+
+    @Override
+    public void bulkDeleteCommentsForProcessInstanceIds(Collection<String> processInstanceIds) {
+        if (processInstanceIds == null || processInstanceIds.isEmpty()) {
+            return;
+        }
+        getMongoDbSession().bulkDelete(COLLECTION_COMMENTS, Filters.in("processInstanceId", processInstanceIds));
     }
 
     @Override

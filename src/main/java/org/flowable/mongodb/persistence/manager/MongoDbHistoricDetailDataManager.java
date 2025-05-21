@@ -12,6 +12,7 @@
  */
 package org.flowable.mongodb.persistence.manager;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -104,6 +105,16 @@ public class MongoDbHistoricDetailDataManager extends AbstractMongoDbDataManager
     public long findHistoricDetailCountByNativeQuery(Map<String, Object> parameterMap) {
         BasicDBObject query = new BasicDBObject(parameterMap);
         return getMongoDbSession().count(COLLECTION_HISTORIC_DETAILS, query);
+    }
+
+    @Override
+    public void bulkDeleteHistoricDetailsByProcessInstanceIds(Collection<String> historicProcessInstanceIds) {
+        getMongoDbSession().bulkDelete(COLLECTION_HISTORIC_DETAILS, Filters.in("processInstanceId", historicProcessInstanceIds));
+    }
+
+    @Override
+    public void bulkDeleteHistoricDetailsByTaskIds(Collection<String> taskIds) {
+        getMongoDbSession().bulkDelete(COLLECTION_HISTORIC_DETAILS, Filters.in("taskId", taskIds));
     }
 
 

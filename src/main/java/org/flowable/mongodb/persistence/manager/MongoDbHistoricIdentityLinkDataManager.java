@@ -12,6 +12,7 @@
  */
 package org.flowable.mongodb.persistence.manager;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.flowable.common.engine.impl.persistence.entity.Entity;
@@ -109,6 +110,21 @@ public class MongoDbHistoricIdentityLinkDataManager extends AbstractMongoDbDataM
                 Filters.eq("scopeType", scopeType)
         );
         getMongoDbSession().bulkDelete(COLLECTION_HISTORIC_IDENTITY_LINKS, filter);
+    }
+
+    @Override
+    public void bulkDeleteHistoricIdentityLinksForProcessInstanceIds(Collection<String> processInstanceIds) {
+        getMongoDbSession().bulkDelete(COLLECTION_HISTORIC_IDENTITY_LINKS, Filters.in("processInstanceId", processInstanceIds));
+    }
+
+    @Override
+    public void bulkDeleteHistoricIdentityLinksForTaskIds(Collection<String> taskIds) {
+        getMongoDbSession().bulkDelete(COLLECTION_HISTORIC_IDENTITY_LINKS, Filters.in("taskId", taskIds));
+    }
+
+    @Override
+    public void bulkDeleteHistoricIdentityLinksForScopeIdsAndScopeType(Collection<String> scopeIds, String scopeType) {
+        getMongoDbSession().bulkDelete(COLLECTION_HISTORIC_IDENTITY_LINKS, Filters.and(Filters.in("scopeId", scopeIds), Filters.eq("scopeType", scopeType)));
     }
 
     @Override

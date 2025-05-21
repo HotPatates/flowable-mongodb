@@ -1,9 +1,6 @@
 package org.flowable.mongodb.persistence.manager;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.bson.conversions.Bson;
@@ -99,6 +96,24 @@ public class MongoDbHistoricVariableInstanceDataManager extends AbstractMongoDbD
     public long findHistoricVariableInstanceCountByNativeQuery(Map<String, Object> parameterMap) {
         BasicDBObject query = new BasicDBObject(parameterMap);
         return getMongoDbSession().count(COLLECTION_HISTORIC_VARIABLE_INSTANCES, query);
+    }
+
+    @Override
+    public void bulkDeleteHistoricVariableInstancesByProcessInstanceIds(Collection<String> processInstanceIds) {
+        getMongoDbSession().bulkDelete(COLLECTION_HISTORIC_VARIABLE_INSTANCES, Filters.in("processInstanceId", processInstanceIds));
+    }
+
+    @Override
+    public void bulkDeleteHistoricVariableInstancesByTaskIds(Collection<String> taskIds) {
+        getMongoDbSession().bulkDelete(COLLECTION_HISTORIC_VARIABLE_INSTANCES, Filters.in("taskId", taskIds));
+    }
+
+    @Override
+    public void bulkDeleteHistoricVariableInstancesByScopeIdsAndScopeType(Collection<String> scopeIds, String scopeType) {
+        getMongoDbSession().bulkDelete(COLLECTION_HISTORIC_VARIABLE_INSTANCES,Filters.and(
+                Filters.in("scopeId",scopeIds),
+                Filters.eq("scopeType",scopeType)
+        ));
     }
 
     @Override

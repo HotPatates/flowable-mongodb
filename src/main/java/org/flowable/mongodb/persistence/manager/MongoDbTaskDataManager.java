@@ -178,19 +178,19 @@ public class MongoDbTaskDataManager extends AbstractMongoDbDataManager<TaskEntit
 
     protected Bson createSort(TaskQueryImpl taskQuery) {
         List<Bson> bsonSorts = new ArrayList<>();
-        for (Map.Entry<String, Boolean> entry : taskQuery.getOrderByColumnMap().entrySet()) {
-            String column = entry.getKey();
-            boolean ascending = entry.getValue();
-
-            String columnName = null;
-            if (TaskQueryProperty.NAME.getName().equals(column)) {
-                columnName = "name";
-            }
-
-            if (columnName != null) {
-                bsonSorts.add(ascending ? Sorts.ascending(columnName) : Sorts.descending(columnName));
-            }
-        }
+//        for (Map.Entry<String, Boolean> entry : taskQuery.getOrderByColumnMap().entrySet()) {
+//            String column = entry.getKey();
+//            boolean ascending = entry.getValue();
+//
+//            String columnName = null;
+//            if (TaskQueryProperty.NAME.getName().equals(column)) {
+//                columnName = "name";
+//            }
+//
+//            if (columnName != null) {
+//                bsonSorts.add(ascending ? Sorts.ascending(columnName) : Sorts.descending(columnName));
+//            }
+//        }
         return bsonSorts.isEmpty() ? null : Sorts.orderBy(bsonSorts);
     }
 }
